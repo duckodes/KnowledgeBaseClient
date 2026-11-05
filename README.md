@@ -2,6 +2,7 @@
 
 使用原生 HTML、CSS、JavaScript 與 Firebase Authentication 的知識庫問答頁面。
 Firebase 網頁設定會從 `config/firebaseConfig.json` 載入。
+頁面會在目前登入期間暫存最近四輪成功對話，讓助理能承接追問；登出後會清除對話脈絡。
 
 ## 本機啟動
 

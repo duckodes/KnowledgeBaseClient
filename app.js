@@ -34,6 +34,8 @@ let auth = null;
 let currentUser = null;
 let authMode = "sign-in";
 let isSending = false;
+let conversationHistory = [];
+const MAX_CONVERSATION_MESSAGES = 8;
 
 const setAuthMessage = (message) => {
   authMessage.textContent = message || "";
@@ -244,7 +246,7 @@ const appendTypingIndicator = () => {
   return article;
 };
 
-const requestAnswer = async (query) => {
+const requestAnswer = async (query, history) => {
   const idToken = await currentUser.getIdToken();
   const endpoint =
     `https://us-central1-${firebaseConfig.projectId}.cloudfunctions.net/` +
@@ -259,6 +261,7 @@ const requestAnswer = async (query) => {
       data: {
         operation: "answer",
         query,
+        conversationHistory: history,
       },
     }),
   });
@@ -303,9 +306,14 @@ const submitQuestion = async (rawQuestion) => {
   const typing = appendTypingIndicator();
 
   try {
-    const result = await requestAnswer(query);
+    const result = await requestAnswer(query, conversationHistory);
     typing.remove();
     appendMessage("assistant", result.answer, result.sources || []);
+    conversationHistory = [
+      ...conversationHistory,
+      {role: "user", text: query},
+      {role: "assistant", text: result.answer},
+    ].slice(-MAX_CONVERSATION_MESSAGES);
   } catch (error) {
     typing.remove();
     appendMessage(
@@ -323,6 +331,11 @@ const submitQuestion = async (rawQuestion) => {
 };
 
 const updateSignedInUi = (user) => {
+  if (currentUser?.uid !== user?.uid) {
+    conversationHistory = [];
+    messages.replaceChildren();
+    welcome.hidden = false;
+  }
   currentUser = user;
   const signedIn = Boolean(user);
   authPanel.hidden = signedIn;
