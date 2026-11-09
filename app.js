@@ -86,6 +86,7 @@ const appendInlineMarkdown = (parent, text) => {
 };
 
 const renderAnswer = (container, text) => {
+  container.replaceChildren();
   const lines = text.replace(/\r\n?/g, "\n").split("\n");
   let paragraphLines = [];
   let list = null;
@@ -170,6 +171,23 @@ const renderAnswer = (container, text) => {
     code.textContent = codeLines.join("\n");
     pre.append(code);
     container.append(pre);
+  }
+};
+
+const typeAnswer = async (container, text) => {
+  const characters = Array.from(text);
+  const chunkSize = Math.max(1, Math.ceil(characters.length / 100));
+  const conversation = container.closest(".conversation");
+  let visibleCharacters = 0;
+
+  while (visibleCharacters < characters.length) {
+    visibleCharacters = Math.min(
+        visibleCharacters + chunkSize,
+        characters.length,
+    );
+    renderAnswer(container, characters.slice(0, visibleCharacters).join(""));
+    if (conversation) conversation.scrollTop = conversation.scrollHeight;
+    await new Promise((resolve) => setTimeout(resolve, 16));
   }
 };
 
@@ -308,7 +326,8 @@ const submitQuestion = async (rawQuestion) => {
   try {
     const result = await requestAnswer(query, conversationHistory);
     typing.remove();
-    appendMessage("assistant", result.answer, result.sources || []);
+    const answer = appendMessage("assistant", "", result.sources || []);
+    await typeAnswer(answer.querySelector(".message-bubble"), result.answer);
     conversationHistory = [
       ...conversationHistory,
       {role: "user", text: query},
