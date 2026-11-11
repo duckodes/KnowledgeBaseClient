@@ -9,18 +9,41 @@
 ```powershell
 npm ci --ignore-scripts
 npm run build
+npm run preview
 ```
 
-Build 後，使用原本 VS Code Live Server 或本地 HTTP 靜態檔案伺服器，
-從 repository root 提供頁面；建議只監聽 loopback。連接埠為 `31337` 時，
-Reader 是 <http://127.0.0.1:31337/reader.html>，問答頁為 <http://127.0.0.1:31337/>。
+Preview 僅監聽 loopback。Reader 是 <http://127.0.0.1:31337/reader.html>，
+問答頁為 <http://127.0.0.1:31337/>。也可 build 後使用原本 Live Server。
 `file://` 不支援。打包結果在 `reader/assets/`，不納入版本控制；此 build 不執行 Deploy。
 
-此 baseline 只包含閱讀器 source、合成 fixtures、build 與必要說明；測試程式、
-測試依賴、本地 Preview 腳本、審核報告與私人學習筆記不納入此 commit。
-已知 F01（Mermaid 分號指令過濾）、F03（TOC current）仍保留；
-本地未提交的 Preview 腳本另有 F02（Windows 路徑大小寫封鎖）限制。
-此版本只供固定合成資料的 M1 驗收，不代表已接入私人文件或公司授權。
+固定 M1 baseline 為 `046de72feaa5c7e4c73327006235c3848f78f9aa`。
+後續測試工具版本加入 Regression Tests 與本地 Preview，沒有進行 M1.1 功能修正。
+此版本只供固定合成資料驗收，不代表已接入私人文件或公司授權；Preview 不作正式發布伺服器。
+
+## Regression Tests
+
+需要 Node.js 22+、npm，以及已安裝的 Google Chrome（Playwright 使用 `channel: 'chrome'`）。
+乾淨 checkout 安裝依賴後，可執行：
+
+```powershell
+npm ci --ignore-scripts
+npm run build
+npm test
+```
+
+`npm test` 會重新 build、執行 Node 單元測試、建立測試專用 bundle，再跑 Chrome 測試。
+測試獨占 `127.0.0.1:31338`，與手動 Preview 的 `31337` 分開；不沿用另一個 checkout 的 server。
+若 `31338` 已被占用，需先釋放該埠再跑測試。
+測試使用合成 Firebase／Function 回應，不需真實帳號，也不呼叫正式服務。
+
+F01（Mermaid 分號指令過濾）、F02（Windows Preview 路徑大小寫封鎖）、F03（TOC current）
+仍存在；`tests/known-issues.spec.js` 以 `test.fail` 保存可重現案例。
+這些是**預期失敗，不是修正通過或 skipped**；未來修正後，測試會因 unexpected pass 提醒移除標記。
+F02 的預期失敗只標記 Windows，其餘平台照常驗證 404。
+Playwright 的成功總數包含符合預期的失敗；請在 JSON 報告以 `expectedStatus` 與實際 status 區分。
+
+`test-results/`、`playwright-report/`、`tests/assets/`、`reader/assets/` 皆為本地產物，
+不提交 Git。審核暫存、私人文件與 Obsidian 筆記也不納入 Repository。
 
 以下為既有問答頁說明；本輪未變更 Firebase、IAM 或部署流程。
 
