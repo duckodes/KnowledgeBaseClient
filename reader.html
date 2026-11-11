@@ -7,21 +7,24 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'self' about:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <title>文件閱讀室 · KnowledgeSpace</title>
+  <link rel="stylesheet" href="./styles/tokens.css">
   <link rel="stylesheet" href="./reader/reader.css">
   <script type="module" src="./reader/assets/reader.js"></script>
 </head>
 <body class="ks-reader">
   <a class="ks-skip" href="#reader-article">跳到正文</a>
   <header class="ks-header">
-    <a class="ks-brand" href="./reader.html"><span aria-hidden="true">▤</span> KnowledgeSpace <span class="ks-brand-sub">/ 文件閱讀室</span></a>
-    <div class="ks-tools"><a href="./index.html">返回 AI 問答 ↗</a><label>外觀 <select id="reader-theme"><option value="system">跟隨系統</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div>
+    <a class="ks-brand" href="./reader.html"><span class="ks-brand-mark" aria-hidden="true">▤</span> KnowledgeSpace <span class="ks-brand-sub">/ 文件閱讀室</span></a>
+    <div class="ks-tools"><a href="./index.html">返回 AI 問答 ↗</a><label><span>外觀</span><select id="reader-theme" aria-label="外觀"><option value="system">跟隨系統</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div>
   </header>
   <div class="ks-shell">
     <aside class="ks-sidebar">
-      <p class="ks-eyebrow">LOCAL DOCUMENTS / M1</p>
+      <details class="ks-navigation" open><summary>瀏覽文件與章節</summary>
+      <p class="ks-eyebrow">切換文件 · LOCAL DOCUMENTS</p>
       <nav id="reader-library" aria-label="合成文件"></nav>
       <p class="ks-local-note">合成文件預覽<br>不含私人知識來源</p>
-      <details class="ks-toc-panel" open><summary>本頁章節</summary><nav id="reader-toc" aria-label="文章目錄"></nav></details>
+      <div class="ks-toc-panel"><p class="ks-eyebrow">本頁章節</p><nav id="reader-toc" aria-label="文章目錄"></nav></div>
+      </details>
     </aside>
     <main class="ks-main">
       <div class="ks-document-bar"><span id="reader-path"></span><a id="reader-source">閱讀原始 Markdown ↗</a></div>

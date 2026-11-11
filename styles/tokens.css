@@ -1,0 +1,23 @@
+:root {
+  --ks-canvas:#f6f7f3; --ks-surface:#ffffff; --ks-text:#1d2925;
+  --ks-muted:#52635b; --ks-subtle:#78827d; --ks-line:#e8ebe6;
+  --ks-brand:#245c4b; --ks-brand-hover:#194b3d; --ks-on-brand:#ffffff;
+  --ks-link:#245c4b; --ks-soft:#eaf3ed; --ks-border:#78887e; --ks-focus:#245c4b;
+  --ks-code:#eef2ed; --ks-keyword:#245c4b; --ks-string:#166534;
+  --ks-note:#edf4ef; --ks-note-text:#245c4b;
+  --ks-radius-sm:8px; --ks-radius-md:12px; --ks-radius-lg:14px;
+  --ks-space-1:4px; --ks-space-2:8px; --ks-space-3:12px; --ks-space-4:16px; --ks-space-6:24px;
+  --ks-sidebar-width:276px; --ks-control-height:40px;
+  --ks-focus-ring:3px solid var(--ks-focus);
+  --ks-font:"DM Sans","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;
+}
+[data-reader-theme="dark"] {
+  --ks-canvas:#101b16; --ks-surface:#182820; --ks-text:#e3eee7;
+  --ks-muted:#b3c6ba; --ks-line:#3d5548; --ks-brand:#a6d8b7;
+  --ks-brand-hover:#c3e7d0; --ks-on-brand:#14251b; --ks-link:#a6d8b7;
+  --ks-soft:#243e30; --ks-border:#8aa997; --ks-focus:#9dd7b5;
+  --ks-code:#122018; --ks-keyword:#a9d9b8; --ks-string:#86efac;
+  --ks-note:#243e30; --ks-note-text:#c3e7d0;
+}
+@media(max-width:980px) { :root { --ks-sidebar-width:235px; } }
+@media(max-width:720px) { :root { --ks-control-height:44px; } }

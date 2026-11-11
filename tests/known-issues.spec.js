@@ -10,7 +10,6 @@ test('F01: Mermaid policy rejects semicolon-separated style statements', async (
     };
   });
   expect(policy.standalone).toBe(false);
-  test.fail(true, 'F01 is retained in the fixed M1 baseline; remove this annotation when fixed.');
   expect(policy.semicolon).toBe(false);
 });
 
@@ -19,7 +18,6 @@ test('F02: Preview excludes node_modules regardless of Windows path casing', asy
   const response = await request.get('/NODE_MODULES/markdown-it/package.json');
   expect([200, 404]).toContain(response.status());
   if (response.status() === 200) expect((await response.json()).name).toBe('markdown-it');
-  test.fail(process.platform === 'win32', 'F02 is retained in the local-only Preview; remove this annotation when fixed.');
   expect(response.status()).toBe(404);
 });
 
@@ -32,6 +30,5 @@ test('F03: TOC current does not remain on a later section at the page top', asyn
   await expect(current).toHaveText('流程圖');
   await page.evaluate(() => window.scrollTo(0, 0));
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-  test.fail(true, 'F03 is retained in the fixed M1 baseline; remove this annotation when fixed.');
   await expect.poll(() => current.allTextContents(), { timeout: 1000 }).not.toContain('流程圖');
 });

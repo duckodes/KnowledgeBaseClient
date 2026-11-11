@@ -15,10 +15,15 @@ const toc = document.querySelector('#reader-toc');
 const theme = document.querySelector('#reader-theme');
 const media = matchMedia('(prefers-color-scheme: dark)');
 const narrow = matchMedia('(max-width: 900px)');
-const tocPanel = document.querySelector('.ks-toc-panel');
-tocPanel.open = !narrow.matches;
-narrow.addEventListener('change', event => { tocPanel.open = !event.matches; });
-let currentPath, headings = [], generation = 0, observer;
+const navigation = document.querySelector('.ks-navigation');
+navigation.open = !narrow.matches;
+narrow.addEventListener('change', event => { navigation.open = !event.matches; scheduleCurrent(); });
+navigation.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && narrow.matches && navigation.open) {
+    event.preventDefault(); navigation.open = false; navigation.querySelector('summary').focus();
+  }
+});
+let currentPath, headings = [], generation = 0, currentFrame, pendingFragment = false;
 let diagramQueue = Promise.resolve();
 try { theme.value = ['light','dark','system'].includes(localStorage.getItem('ks-reader-theme')) ? localStorage.getItem('ks-reader-theme') : 'system'; } catch { /* Presentation preference is optional. */ }
 function applyTheme() {
@@ -31,6 +36,24 @@ for (const [path, doc] of documents) {
   a.dataset.doc = path; document.querySelector('#reader-library').append(a);
 }
 function announce(text) { status.textContent = text; }
+function updateCurrent() {
+  // The last H2/H3 that crossed the reading line wins; above the first, none is current.
+  const line = parseFloat(getComputedStyle(document.body).getPropertyValue('--ks-heading-offset')) + 2;
+  let active;
+  for (const heading of headings) if ((heading.level === 2 || heading.level === 3) && heading.element.getBoundingClientRect().top <= line) active = heading.id;
+  for (const a of toc.querySelectorAll('a')) {
+    if (a.dataset.heading === active) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
+  }
+}
+function scheduleCurrent() {
+  if (currentFrame) return;
+  currentFrame = requestAnimationFrame(() => { currentFrame = 0; updateCurrent(); });
+}
+window.addEventListener('scroll', scheduleCurrent, { passive: true });
+window.addEventListener('resize', scheduleCurrent);
+new ResizeObserver(scheduleCurrent).observe(article);
+for (const event of ['wheel', 'touchmove', 'pointerdown']) window.addEventListener(event, () => { pendingFragment = false; }, { passive: true });
+window.addEventListener('keydown', event => { if (['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key)) pendingFragment = false; });
 function moveToFragment(focus = false) {
   let id;
   try { id = decodeURIComponent(location.hash.slice(1)); } catch { announce('章節連結編碼無效。'); return; }
@@ -38,9 +61,7 @@ function moveToFragment(focus = false) {
   if (id && !heading) { announce('找不到指定章節；已保留完整文章。'); if (focus) article.focus(); return; }
   if (heading) { heading.element.scrollIntoView({ block: 'start' }); if (focus) heading.element.focus({ preventScroll: true }); }
   else { window.scrollTo(0, 0); if (focus) article.focus({ preventScroll: true }); }
-  for (const a of toc.querySelectorAll('a')) {
-    if (a.dataset.heading === id) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
-  }
+  updateCurrent();
 }
 async function decorateDiagrams(token) {
   for (const code of article.querySelectorAll('pre > code.language-mermaid')) {
@@ -53,20 +74,23 @@ async function decorateDiagrams(token) {
     pre.before(figure); details.append(summary, pre); figure.append(caption, viewport, details);
     try {
       await renderDiagram(source, viewport, isDark());
-    } catch {
+    } catch (error) {
       viewport.replaceChildren(); const fallback = document.createElement('p'); fallback.className = 'ks-diagram-error';
-      fallback.textContent = '圖表無法顯示或已被安全規則拒絕。請閱讀文字替代與原始圖碼。';
+      fallback.textContent = `圖表無法顯示或已被安全規則拒絕。${error.message} 請閱讀文字替代與原始圖碼。`;
       viewport.append(fallback); details.open = true;
     }
     if (token !== generation) return;
   }
   // Async diagram height must not move the requested fragment away from the viewport.
-  if (token === generation && location.hash) moveToFragment(false);
+  if (token === generation && pendingFragment && location.hash) moveToFragment(false);
+  scheduleCurrent();
 }
 function load({ focus = false, force = false } = {}) {
+  const expanded = document.querySelector('.ks-diagram-dialog[open]');
+  if (expanded) { expanded.dataset.navigating = ''; expanded.close(); }
   const path = new URLSearchParams(location.search).get('doc') || fixturePaths[0];
   if (path === currentPath && !force) { announce(''); moveToFragment(focus); return; }
-  currentPath = path; const token = ++generation; observer?.disconnect();
+  currentPath = path; const token = ++generation; pendingFragment = Boolean(location.hash);
   article.replaceChildren(); toc.replaceChildren(); headings = [];
   const doc = documents.get(path);
   document.querySelector('#reader-path').textContent = doc ? `文件 / ${doc.title}` : '文件不存在';
@@ -92,20 +116,16 @@ function load({ focus = false, force = false } = {}) {
     const raw = pre.querySelector('code').textContent;
     const wrapper = document.createElement('div'); wrapper.className = 'ks-code'; pre.before(wrapper);
     const bar = document.createElement('div'); bar.className = 'ks-code-bar';
-    const label = document.createElement('span'); label.textContent = pre.querySelector('code').className.replace('language-', '') || 'code';
+    const label = document.createElement('span'); label.textContent = `${pre.querySelector('code').className.replace('language-', '') || 'code'} · 可水平捲動 ↔`;
     const button = document.createElement('button'); button.type = 'button'; button.textContent = '複製程式碼';
     button.addEventListener('click', async () => {
       try { await navigator.clipboard.writeText(raw); announce('程式碼已複製。'); }
       catch { announce('無法使用剪貼簿，請手動選取程式碼複製。'); pre.focus(); }
     }); bar.append(label, button); wrapper.append(bar, pre);
   }
-  observer = new IntersectionObserver(entries => {
-    const visible = entries.filter(e => e.isIntersecting).sort((a,b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-    if (visible) for (const a of toc.querySelectorAll('a')) {
-      if (`doc-${a.dataset.heading}` === visible.target.id) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
-    }
-  }, { rootMargin: '-80px 0px -55% 0px' });
-  headings.filter(h => h.level === 2 || h.level === 3).forEach(h => observer.observe(h.element));
+  for (const table of article.querySelectorAll('.ks-table-scroll')) {
+    const hint = document.createElement('span'); hint.className = 'ks-scroll-hint'; hint.textContent = '表格可水平捲動 ↔；聚焦後可使用方向鍵。'; table.before(hint);
+  }
   moveToFragment(focus);
   // Serialize Mermaid global state; obsolete routes never write into the active article.
   diagramQueue = diagramQueue.then(() => token === generation ? decorateDiagrams(token) : undefined).catch(() => announce('圖表資源無法載入，請閱讀原碼。'));
@@ -117,6 +137,7 @@ document.addEventListener('click', event => {
   if (a.classList.contains('ks-skip')) { event.preventDefault(); article.focus(); article.scrollIntoView(); return; }
   if (url.origin === location.origin && url.pathname === location.pathname) {
     event.preventDefault();
+    if (narrow.matches) navigation.open = false;
     if (url.href !== location.href) history.pushState(null, '', url);
     load({ focus: true });
   }

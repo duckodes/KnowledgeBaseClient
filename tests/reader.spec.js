@@ -95,8 +95,8 @@ for (const width of [320, 390, 1440]) test(`responsive, keyboard and theme at ${
   await expect(page.frameLocator('.ks-diagram-frame').locator('svg')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBeTruthy();
   if (width < 900) {
-    const summary = page.locator('.ks-toc-panel > summary'); await summary.focus();
-    await page.keyboard.press('Enter'); await expect(page.locator('.ks-toc-panel')).toHaveAttribute('open', '');
+    const summary = page.locator('.ks-navigation > summary'); await summary.focus();
+    await page.keyboard.press('Enter'); await expect(page.locator('.ks-navigation')).toHaveAttribute('open', '');
     const link = page.locator('#reader-toc a').first(); await link.focus(); await page.keyboard.press('Enter');
     await expect(page.locator('#doc-開始閱讀')).toBeFocused();
   }

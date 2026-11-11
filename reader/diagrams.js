@@ -1,4 +1,6 @@
 import DOMPurify from 'dompurify';
+import { diagramAllowed } from './diagram-policy.js';
+export { diagramAllowed } from './diagram-policy.js';
 let renderer;
 let sequence = 0;
 export const mermaidConfig = Object.freeze({
@@ -7,15 +9,17 @@ export const mermaidConfig = Object.freeze({
   flowchart: { htmlLabels: false },
   secure: ['secure','securityLevel','startOnLoad','maxTextSize','maxEdges','suppressErrorRendering','htmlLabels','flowchart','theme','themeVariables','themeCSS','fontFamily','altFontFamily','dompurifyConfig'],
 });
-export function diagramAllowed(code) {
-  // M1 excludes diagram-authored configuration, CSS, clicks, and frontmatter.
-  return code.length <= 12000 && !/%%\{|^\s*---|^\s*(?:click|style|classDef|linkStyle)\s/mi.test(code);
-}
 export async function renderDiagram(code, target, dark) {
-  if (!diagramAllowed(code)) throw new Error('不允許圖表內設定、樣式或互動指令。');
+  if (!diagramAllowed(code)) throw new Error('只支援純文字矩形節點與箭頭的 Flowchart；設定、樣式、互動及未知語法已拒絕。');
   renderer ||= import('mermaid').then(m => m.default);
   const mermaid = await renderer;
-  mermaid.initialize({ ...mermaidConfig, theme: dark ? 'dark' : 'default' });
+  const palette = getComputedStyle(document.body);
+  const color = token => palette.getPropertyValue(`--ks-${token}`).trim();
+  mermaid.initialize({ ...mermaidConfig, theme: 'base', themeVariables: {
+    primaryColor:color('soft'), primaryTextColor:color('text'), primaryBorderColor:color('link'),
+    lineColor:color('muted'), background:color('surface'),
+  } });
+  await mermaid.parse(code);
   const id = `ks-diagram-${++sequence}`;
   // Explicit detached work area is removed even when Mermaid parsing fails.
   const workspace = document.createElement('div');
@@ -39,14 +43,14 @@ export async function renderDiagram(code, target, dark) {
     frame.className = 'ks-diagram-frame';
     const [, , graphicWidth, graphicHeight] = graphic.getAttribute('viewBox').split(/\s+/).map(Number);
     if (!(graphicWidth > 0 && graphicHeight > 0)) throw new Error('圖表尺寸無效。');
-    // Keep labels near their native size on narrow screens; fit remains explicit.
-    let zoom = Math.max(100, Math.min(300, Math.ceil(graphicWidth / Math.max(target.clientWidth, 1) * 4) * 25));
+    let zoom = 100;
     const draw = () => {
+      frame.setAttribute('aria-busy', 'true');
+      frame.onload = () => frame.setAttribute('aria-busy', 'false');
       frame.style.aspectRatio = `${graphicWidth} / ${graphicHeight * zoom / 100}`;
       graphic.removeAttribute('width'); graphic.removeAttribute('height');
       graphic.style.cssText = `width:${zoom}%;max-width:none;height:auto;display:block`;
-      const bg = dark ? '#111c2e' : '#ffffff';
-      frame.srcdoc = `<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>body{margin:0;background:${bg}}div{overflow:auto;height:100vh}div:focus-visible{outline:3px solid ${dark ? '#c4b5fd' : '#7c3aed'};outline-offset:-3px}</style><div tabindex="0" role="region" aria-label="圖表，可用方向鍵捲動">${graphic.outerHTML}</div></html>`;
+      frame.srcdoc = `<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><style>body{margin:0;background:${color('surface')};color-scheme:${dark ? 'dark' : 'light'}}div{overflow:auto;height:100vh}div:focus-visible{outline:3px solid ${color('focus')};outline-offset:-3px}</style><div tabindex="0" role="region" aria-label="圖表，可用方向鍵捲動">${graphic.outerHTML}</div></html>`;
     };
     const controls = document.createElement('div'); controls.className = 'ks-diagram-controls';
     const output = document.createElement('span'); output.setAttribute('aria-live', 'polite');
@@ -54,6 +58,27 @@ export async function renderDiagram(code, target, dark) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
       button.addEventListener('click', () => { zoom = operation(); output.textContent = `${zoom}%`; draw(); }); controls.append(button);
     }
-    output.textContent = `${zoom}%`; controls.append(output); target.append(controls, frame); draw();
+    const expand = document.createElement('button'); expand.type = 'button'; expand.textContent = '展開圖表';
+    expand.addEventListener('click', () => {
+      const placeholder = document.createComment('diagram return position'); target.before(placeholder);
+      const dialog = document.createElement('dialog'); dialog.className = 'ks-diagram-dialog';
+      const header = document.createElement('div'); header.className = 'ks-dialog-header';
+      const title = document.createElement('h2'); title.id = `${id}-title`; title.textContent = '展開圖表'; dialog.setAttribute('aria-labelledby', title.id);
+      const close = document.createElement('button'); close.type = 'button'; close.textContent = '關閉圖表'; close.autofocus = true;
+      close.addEventListener('click', () => dialog.close());
+      header.append(title, close); dialog.append(header, target); document.body.append(dialog);
+      expand.hidden = true;
+      dialog.addEventListener('close', () => {
+        placeholder.replaceWith(target); expand.hidden = false; dialog.remove();
+        draw();
+        if (expand.isConnected && !dialog.hasAttribute('data-navigating')) expand.focus({ preventScroll: true });
+      }, { once: true });
+      dialog.showModal();
+      // Moving a sandbox iframe into the top layer can leave its old compositor surface blank.
+      draw();
+    });
+    const hint = document.createElement('p'); hint.className = 'ks-scroll-hint';
+    hint.textContent = '100% 為適合寬度；放大後可在圖內水平捲動，或聚焦圖表後用方向鍵平移。';
+    output.textContent = `${zoom}%`; controls.append(output, expand); target.append(controls, hint, frame); draw();
   } finally { workspace.remove(); document.getElementById(`d${id}`)?.remove(); }
 }

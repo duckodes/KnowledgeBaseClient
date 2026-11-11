@@ -1,6 +1,6 @@
 # Jacfit Knowledge Base Client
 
-## M1 Document Reader（本地原型）
+## M1.1 Document Reader（本地原型）
 
 保留現有 Firebase Login 與 AI Q&A，新增獨立 `reader.html`。Reader 只使用隨附的合成 Markdown，不需要登入或文件後端，不會連接私人知識來源。問答頁上方的「文件閱讀」入口另開分頁，保留原分頁的問答狀態。
 
@@ -13,11 +13,12 @@ npm run preview
 ```
 
 Preview 僅監聽 loopback。Reader 是 <http://127.0.0.1:31337/reader.html>，
-問答頁為 <http://127.0.0.1:31337/>。也可 build 後使用原本 Live Server。
+問答頁為 <http://127.0.0.1:31337/>。若該埠已被 Live Server 使用，可執行 `node scripts/preview.mjs 31339`。
 `file://` 不支援。打包結果在 `reader/assets/`，不納入版本控制；此 build 不執行 Deploy。
 
 固定 M1 baseline 為 `046de72feaa5c7e4c73327006235c3848f78f9aa`。
-後續測試工具版本加入 Regression Tests 與本地 Preview，沒有進行 M1.1 功能修正。
+測試工具起點為 `8c023abadb2f090caa1784abc22f620f5ad729a1`。
+M1.1 加入共享 Green／Neutral Tokens、手機收合導覽、依閱讀線更新的 TOC，以及可關閉的圖表展開視窗。
 此版本只供固定合成資料驗收，不代表已接入私人文件或公司授權；Preview 不作正式發布伺服器。
 
 ## Regression Tests
@@ -36,11 +37,24 @@ npm test
 若 `31338` 已被占用，需先釋放該埠再跑測試。
 測試使用合成 Firebase／Function 回應，不需真實帳號，也不呼叫正式服務。
 
-F01（Mermaid 分號指令過濾）、F02（Windows Preview 路徑大小寫封鎖）、F03（TOC current）
-仍存在；`tests/known-issues.spec.js` 以 `test.fail` 保存可重現案例。
-這些是**預期失敗，不是修正通過或 skipped**；未來修正後，測試會因 unexpected pass 提醒移除標記。
-F02 的預期失敗只標記 Windows，其餘平台照常驗證 404。
-Playwright 的成功總數包含符合預期的失敗；請在 JSON 報告以 `expectedStatus` 與實際 status 區分。
+F01（Mermaid 來源政策）、F02（Preview 路徑大小寫）、F03（TOC current）原 Assertion 保留於
+`tests/known-issues.spec.js`，已移除預期失敗標記；新增 Unit 與 Browser Tests 驗證等價語法、實際渲染及導覽生命週期。
+
+Mermaid 僅接受保守子集：`flowchart`／`graph` 加方向、純文字矩形節點、`-->`、單行 `accTitle`／`accDescr`、行註解；可用換行或分號分隔。
+來源樣式、click、class、init／config、HTML、未知圖型與未支援語法均拒絕，保留原因、相鄰文字替代與原始圖碼。
+來源政策先於 Mermaid Parser／Host DOM；仍保留 strict、SVG Sanitization、無權限 Sandbox 與 CSP。
+此有限語法與測試語料不構成任意網路 Markdown 的安全保證。
+
+Preview 使用明確的公開檔案 Allowlist、解析後的實體路徑核對；不提供工作樹、node_modules 或測試原始碼。
+只有 Playwright 的明確 `--test` 模式允許單一測試 bundle。手動 Preview 預設不提供該 bundle；這項保護不適用於其他 Live Server。
+Preview 僅供本機開發，不能作為 Production Server。
+
+TOC 以最後一個跨越閱讀線的 H2／H3 為 current；首個 H2 之前無 current。捲動只更新呈現，不修改 URL、History 或焦點。
+手機「瀏覽文件與章節」預設收合；Escape 關閉並回到開關，選章節則回到正文標題。
+圖表預設 100% 適合寬度；放大後在圖內捲動或用方向鍵平移。「展開圖表」使用同一個 iframe，Escape／關閉後回到原按鈕。
+
+`styles/tokens.css` 是兩頁共用的顏色、Radius、字型、Sidebar 寬度、Control Height 與 Focus Ring；
+`styles.css` 保留聊天版面，`reader/reader.css` 保留文章、TOC、Code／Table Overflow 與 Mermaid 版面。
 
 `test-results/`、`playwright-report/`、`tests/assets/`、`reader/assets/` 皆為本地產物，
 不提交 Git。審核暫存、私人文件與 Obsidian 筆記也不納入 Repository。
