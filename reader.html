@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'none'; connect-src 'none'; font-src 'none'; frame-src 'self' about:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>文件閱讀室 · KnowledgeSpace</title>
+  <link rel="stylesheet" href="./reader/reader.css">
+  <script type="module" src="./reader/assets/reader.js"></script>
+</head>
+<body class="ks-reader">
+  <a class="ks-skip" href="#reader-article">跳到正文</a>
+  <header class="ks-header">
+    <a class="ks-brand" href="./reader.html"><span aria-hidden="true">▤</span> KnowledgeSpace <span class="ks-brand-sub">/ 文件閱讀室</span></a>
+    <div class="ks-tools"><a href="./index.html">返回 AI 問答 ↗</a><label>外觀 <select id="reader-theme"><option value="system">跟隨系統</option><option value="light">Light</option><option value="dark">Dark</option></select></label></div>
+  </header>
+  <div class="ks-shell">
+    <aside class="ks-sidebar">
+      <p class="ks-eyebrow">LOCAL DOCUMENTS / M1</p>
+      <nav id="reader-library" aria-label="合成文件"></nav>
+      <p class="ks-local-note">合成文件預覽<br>不含私人知識來源</p>
+      <details class="ks-toc-panel" open><summary>本頁章節</summary><nav id="reader-toc" aria-label="文章目錄"></nav></details>
+    </aside>
+    <main class="ks-main">
+      <div class="ks-document-bar"><span id="reader-path"></span><a id="reader-source">閱讀原始 Markdown ↗</a></div>
+      <p id="reader-status" role="status" class="ks-status"></p>
+      <article id="reader-article" tabindex="-1" aria-label="文件正文"><p>正在準備文件。若未載入，請先執行 npm run build，或使用下方原始 Markdown。</p></article>
+      <noscript><p>JavaScript 未啟用，仍可閱讀完整合成 Markdown：<a href="./reader/fixtures/guide.md">閱讀指南</a>、<a href="./reader/fixtures/examples/連結 範例.md">連結範例</a>、<a href="./reader/fixtures/safety.md">安全測試</a>。</p></noscript>
+      <details class="ks-raw-fallback"><summary>無法載入閱讀器？開啟完整原始文件</summary><p><a href="./reader/fixtures/guide.md">原始閱讀指南</a> · <a href="./reader/fixtures/examples/連結%20範例.md">原始連結範例</a> · <a href="./reader/fixtures/safety.md">原始安全範例</a></p></details>
+      <footer class="ks-footer">KnowledgeSpace Reader <span>M1 · Synthetic fixtures only</span></footer>
+    </main>
+  </div>
+</body>
+</html>

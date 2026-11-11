@@ -1,0 +1,6 @@
+node_modules/
+reader/assets/
+test-results/
+playwright-report/
+tests/assets/
+.preview.log

@@ -326,6 +326,18 @@ button {
   color: #c1c8c2;
 }
 
+.reader-entry {
+  color: #245c4b;
+  font-size: 11px;
+  white-space: nowrap;
+  text-underline-offset: 3px;
+}
+
+.reader-entry:focus-visible {
+  outline: 3px solid #7c3aed;
+  outline-offset: 4px;
+}
+
 .topbar-right {
   display: flex;
   align-items: center;

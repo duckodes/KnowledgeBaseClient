@@ -1,0 +1,20 @@
+{
+  "name": "knowledge-space-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "dompurify": "3.4.17",
+    "highlight.js": "11.11.1",
+    "markdown-it": "14.3.3",
+    "mermaid": "11.17.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12"
+  },
+  "overrides": {
+    "katex": "0.18.2"
+  }
+}
