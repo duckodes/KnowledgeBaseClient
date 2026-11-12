@@ -26,8 +26,8 @@ M1.2 沿用 Q&A 的原始 Jacfit SVG／JACFIT／KNOWLEDGE STUDIO，統一 UI 排
 
 ## 編輯規格
 
-根目錄 `.editorconfig` 統一 UTF-8、LF、2 空白縮排、檔尾換行與移除行尾空白，
-並以 100 字元作為折行參考；Markdown 保留行尾空白，避免改變強制換行語意。
+根目錄 `.editorconfig` 統一 UTF-8、LF、Tab 縮排（4 字元寬）、檔尾換行與移除行尾空白。
+Markdown 使用 2 空白縮排並保留行尾空白，避免改變清單與強制換行語意；不另設定行寬限制。
 `.gitattributes` 將 Git 的文字檔案簽出統一為 LF，避免 Windows 的 `core.autocrlf` 覆寫設定。
 請使用支援 EditorConfig 的編輯器或擴充套件；此設定不會自動格式化整個 Repository，
 也不負責 JavaScript 引號、分號或程式邏輯檢查。
