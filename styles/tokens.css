@@ -1,86 +1,88 @@
 :root {
-  --ks-canvas: #f6f7f3;
-  --ks-surface: #ffffff;
-  --ks-text: #1d2925;
-  --ks-muted: #52635b;
-  --ks-subtle: #78827d;
-  --ks-line: #e8ebe6;
-  --ks-brand: #245c4b;
-  --ks-brand-hover: #194b3d;
-  --ks-on-brand: #ffffff;
-  --ks-link: #245c4b;
-  --ks-soft: #eaf3ed;
-  --ks-border: #78887e;
-  --ks-focus: #245c4b;
-  --ks-code: #eef2ed;
-  --ks-keyword: #245c4b;
-  --ks-string: #166534;
-  --ks-note: #edf4ef;
-  --ks-note-text: #245c4b;
-  --ks-radius-sm: 8px;
-  --ks-radius-md: 12px;
-  --ks-radius-lg: 14px;
-  --ks-space-1: 4px;
-  --ks-space-2: 8px;
-  --ks-space-3: 12px;
-  --ks-space-4: 16px;
-  --ks-space-6: 24px;
-  --ks-sidebar-width: 276px;
-  --ks-control-height: 40px;
-  --ks-focus-ring: 3px solid var(--ks-focus);
-  --ks-font: "DM Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
-  --ks-mono-font: "Cascadia Code", Consolas, ui-monospace, monospace;
-  --ks-ui-font-size: 11px;
-  --ks-ui-line-height: normal;
-  --ks-ui-weight: 400;
-  --ks-control-weight: 600;
-  --ks-label-font-size: 10px;
-  --ks-label-weight: 700;
-  --ks-label-spacing: 0.12em;
-  --ks-breadcrumb-font-size: 11px;
-  --ks-brand-font-size: 15px;
-  --ks-brand-weight: 700;
-  --ks-brand-spacing: 0.15em;
-  --ks-brand-caption-size: 8px;
-  --ks-brand-caption-spacing: 0.14em;
-  --ks-brand-caption: #65756b;
-  --ks-elevated: #ffffff;
-  --ks-article: #f6f7f3;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	--ks-canvas: #f6f7f3;
+	--ks-surface: #ffffff;
+	--ks-text: #1d2925;
+	--ks-muted: #52635b;
+	--ks-subtle: #78827d;
+	--ks-line: #e8ebe6;
+	--ks-brand: #245c4b;
+	--ks-brand-hover: #194b3d;
+	--ks-on-brand: #ffffff;
+	--ks-link: #245c4b;
+	--ks-soft: #eaf3ed;
+	--ks-border: #78887e;
+	--ks-focus: #245c4b;
+	--ks-code: #eef2ed;
+	--ks-keyword: #245c4b;
+	--ks-string: #166534;
+	--ks-note: #edf4ef;
+	--ks-note-text: #245c4b;
+	--ks-radius-sm: 8px;
+	--ks-radius-md: 12px;
+	--ks-radius-lg: 14px;
+	--ks-space-1: 4px;
+	--ks-space-2: 8px;
+	--ks-space-3: 12px;
+	--ks-space-4: 16px;
+	--ks-space-6: 24px;
+	--ks-sidebar-width: 276px;
+	--ks-control-height: 40px;
+	--ks-focus-ring: 3px solid var(--ks-focus);
+	--ks-font:
+		"DM Sans", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei",
+		sans-serif;
+	--ks-mono-font: "Cascadia Code", Consolas, ui-monospace, monospace;
+	--ks-ui-font-size: 11px;
+	--ks-ui-line-height: normal;
+	--ks-ui-weight: 400;
+	--ks-control-weight: 600;
+	--ks-label-font-size: 10px;
+	--ks-label-weight: 700;
+	--ks-label-spacing: 0.12em;
+	--ks-breadcrumb-font-size: 11px;
+	--ks-brand-font-size: 15px;
+	--ks-brand-weight: 700;
+	--ks-brand-spacing: 0.15em;
+	--ks-brand-caption-size: 8px;
+	--ks-brand-caption-spacing: 0.14em;
+	--ks-brand-caption: #65756b;
+	--ks-elevated: #ffffff;
+	--ks-article: #f6f7f3;
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 [data-reader-theme="dark"] {
-  --ks-canvas: #121416;
-  --ks-surface: #1b1e22;
-  --ks-elevated: #24282d;
-  --ks-article: #17191c;
-  --ks-text: #e6e8eb;
-  --ks-muted: #b1b7c1;
-  --ks-line: #343940;
-  --ks-brand: #91c8a9;
-  --ks-brand-hover: #afdbc1;
-  --ks-on-brand: #112218;
-  --ks-link: #9ad1b2;
-  --ks-soft: #2a3035;
-  --ks-border: #737c87;
-  --ks-focus: #8fd0ac;
-  --ks-code: #14171b;
-  --ks-keyword: #c3cbd7;
-  --ks-string: #adceb8;
-  --ks-note: #24282d;
-  --ks-note-text: #dde1e6;
-  --ks-brand-caption: #b1b7c1;
+	--ks-canvas: #121416;
+	--ks-surface: #1b1e22;
+	--ks-elevated: #24282d;
+	--ks-article: #17191c;
+	--ks-text: #e6e8eb;
+	--ks-muted: #b1b7c1;
+	--ks-line: #343940;
+	--ks-brand: #91c8a9;
+	--ks-brand-hover: #afdbc1;
+	--ks-on-brand: #112218;
+	--ks-link: #9ad1b2;
+	--ks-soft: #2a3035;
+	--ks-border: #737c87;
+	--ks-focus: #8fd0ac;
+	--ks-code: #14171b;
+	--ks-keyword: #c3cbd7;
+	--ks-string: #adceb8;
+	--ks-note: #24282d;
+	--ks-note-text: #dde1e6;
+	--ks-brand-caption: #b1b7c1;
 }
 @media (max-width: 980px) {
-  :root {
-    --ks-sidebar-width: 235px;
-  }
+	:root {
+		--ks-sidebar-width: 235px;
+	}
 }
 @media (max-width: 720px) {
-  :root {
-    --ks-control-height: 44px;
-    --ks-breadcrumb-font-size: 10px;
-  }
+	:root {
+		--ks-control-height: 44px;
+		--ks-breadcrumb-font-size: 10px;
+	}
 }

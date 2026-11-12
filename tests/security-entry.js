@@ -1,2 +1,6 @@
-export { renderMarkdown } from '../reader/markdown.js';
-export { diagramAllowed, mermaidConfig, renderDiagram } from '../reader/diagrams.js';
+export { renderMarkdown } from "../reader/markdown.js";
+export {
+	diagramAllowed,
+	mermaidConfig,
+	renderDiagram,
+} from "../reader/diagrams.js";
