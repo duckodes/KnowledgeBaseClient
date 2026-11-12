@@ -2,7 +2,7 @@ import { realpath, stat } from 'node:fs/promises';
 import { resolve, sep } from 'node:path';
 import { fixturePaths } from '../reader/links.js';
 
-const publicFiles = new Set(['index.html', 'app.js', 'styles.css', 'styles/tokens.css',
+const publicFiles = new Set(['index.html', 'app.js', 'styles.css', 'styles/tokens.css', 'styles/brand.css',
   'reader.html', 'reader/reader.css', 'config/firebaseConfig.json',
   ...fixturePaths.map(path => `reader/fixtures/${path}`)]);
 const comparable = path => process.platform === 'win32' ? path.toLowerCase() : path;

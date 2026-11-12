@@ -1,0 +1,2 @@
+# Keep text checkouts consistent with .editorconfig, including on Windows.
+* text=auto eol=lf

@@ -10,10 +10,6 @@
   --white: var(--ks-surface);
   --shadow: 0 16px 48px rgba(32, 54, 43, 0.07);
   font-family: var(--ks-font);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -65,55 +61,25 @@ button {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 11px;
   margin: 0 0 49px 3px;
-  color: inherit;
-  text-decoration: none;
 }
 
 .brand-mark {
-  display: grid;
-  width: 43px;
-  height: 43px;
-  place-items: center;
-  color: white;
-  background: var(--green);
-  border-radius: var(--ks-radius-lg);
   box-shadow: 0 6px 15px rgba(36, 92, 75, 0.2);
 }
 
-.brand-mark svg {
-  width: 27px;
-  height: 27px;
-}
-
-.brand-copy,
 .workspace-copy,
 .account-copy {
   display: grid;
   gap: 3px;
 }
 
-.brand-copy strong {
-  font-size: 15px;
-  letter-spacing: 0.15em;
-}
-
-.brand-copy span {
-  color: #8c9690;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
 .sidebar-label {
   margin: 0 0 12px 9px;
   color: #929b96;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: var(--ks-label-font-size);
+  font-weight: var(--ks-label-weight);
+  letter-spacing: var(--ks-label-spacing);
   text-transform: uppercase;
 }
 
@@ -190,7 +156,9 @@ button {
   border: 0;
   border-radius: 9px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--ks-ui-font-size);
+  font-weight: var(--ks-ui-weight);
+  line-height: var(--ks-ui-line-height);
   transition: background 160ms ease, color 160ms ease;
 }
 
@@ -314,7 +282,7 @@ button {
   align-items: center;
   gap: 10px;
   color: #8b948e;
-  font-size: 11px;
+  font-size: var(--ks-breadcrumb-font-size);
 }
 
 .breadcrumb strong {
@@ -328,7 +296,7 @@ button {
 
 .reader-entry {
   color: #245c4b;
-  font-size: 11px;
+  font-size: var(--ks-ui-font-size);
   white-space: nowrap;
   text-underline-offset: 3px;
 }
@@ -774,8 +742,9 @@ h1 span {
   border: 1px solid var(--green);
   border-radius: var(--ks-radius-sm);
   cursor: pointer;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--ks-ui-font-size);
+  font-weight: var(--ks-control-weight);
+  line-height: var(--ks-ui-line-height);
   transition: background 150ms ease;
 }
 
@@ -1025,17 +994,6 @@ h1 span {
     margin: 0 0 13px;
   }
 
-  .brand-mark {
-    width: 37px;
-    height: 37px;
-    border-radius: var(--ks-radius-md);
-  }
-
-  .brand-mark svg {
-    width: 24px;
-    height: 24px;
-  }
-
   .sidebar-label,
   .workspace-card,
   .suggestion-list,
@@ -1058,7 +1016,7 @@ h1 span {
   }
 
   .breadcrumb {
-    font-size: 10px;
+    font-size: var(--ks-breadcrumb-font-size);
   }
 
   .connection-pill {

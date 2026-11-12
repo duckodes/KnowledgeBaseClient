@@ -1,6 +1,6 @@
 # Jacfit Knowledge Base Client
 
-## M1.1 Document Reader（本地原型）
+## M1.2 Document Reader（本地原型）
 
 保留現有 Firebase Login 與 AI Q&A，新增獨立 `reader.html`。Reader 只使用隨附的合成 Markdown，不需要登入或文件後端，不會連接私人知識來源。問答頁上方的「文件閱讀」入口另開分頁，保留原分頁的問答狀態。
 
@@ -19,7 +19,18 @@ Preview 僅監聽 loopback。Reader 是 <http://127.0.0.1:31337/reader.html>，
 固定 M1 baseline 為 `046de72feaa5c7e4c73327006235c3848f78f9aa`。
 測試工具起點為 `8c023abadb2f090caa1784abc22f620f5ad729a1`。
 M1.1 加入共享 Green／Neutral Tokens、手機收合導覽、依閱讀線更新的 TOC，以及可關閉的圖表展開視窗。
+M1.2 沿用 Q&A 的原始 Jacfit SVG／JACFIT／KNOWLEDGE STUDIO，統一 UI 排字與字型合成設定；
+正文保留 16px／1.8 行高，Dark Mode 改為中性 Charcoal Surface，綠色用於品牌與互動提示。
+未新增遠端字型；實際字體依系統安裝的 Font Stack 回退，測試另檢查 Chrome 的 Platform Fonts。
 此版本只供固定合成資料驗收，不代表已接入私人文件或公司授權；Preview 不作正式發布伺服器。
+
+## 編輯規格
+
+根目錄 `.editorconfig` 統一 UTF-8、LF、2 空白縮排、檔尾換行與移除行尾空白，
+並以 100 字元作為折行參考；Markdown 保留行尾空白，避免改變強制換行語意。
+`.gitattributes` 將 Git 的文字檔案簽出統一為 LF，避免 Windows 的 `core.autocrlf` 覆寫設定。
+請使用支援 EditorConfig 的編輯器或擴充套件；此設定不會自動格式化整個 Repository，
+也不負責 JavaScript 引號、分號或程式邏輯檢查。
 
 ## Regression Tests
 
@@ -54,7 +65,10 @@ TOC 以最後一個跨越閱讀線的 H2／H3 為 current；首個 H2 之前無 
 圖表預設 100% 適合寬度；放大後在圖內捲動或用方向鍵平移。「展開圖表」使用同一個 iframe，Escape／關閉後回到原按鈕。
 
 `styles/tokens.css` 是兩頁共用的顏色、Radius、字型、Sidebar 寬度、Control Height 與 Focus Ring；
+`styles/brand.css` 統一品牌元件的 SVG 尺寸、字體層級、間距與 Mobile 比例。
+原始 SVG 以 `index.html` 為準，Reader 保留相同路徑，Regression Test 核對兩份標記以防偏離。
 `styles.css` 保留聊天版面，`reader/reader.css` 保留文章、TOC、Code／Table Overflow 與 Mermaid 版面。
+支援 `moveBefore()` 的瀏覽器以原生移動保留 Expanded Diagram 的 iframe Document；其他瀏覽器沿用 srcdoc Reload，安全限制相同。
 
 `test-results/`、`playwright-report/`、`tests/assets/`、`reader/assets/` 皆為本地產物，
 不提交 Git。審核暫存、私人文件與 Obsidian 筆記也不納入 Repository。
