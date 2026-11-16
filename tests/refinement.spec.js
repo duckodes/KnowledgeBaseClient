@@ -136,7 +136,7 @@ for (const width of [320, 390, 1440])
 		page,
 	}) => {
 		await page.setViewportSize({ width, height: 900 });
-		await page.goto("/reader.html");
+		await page.goto("/reader.html?doc=guide.md");
 		await expect(
 			page.frameLocator(".ks-diagram-frame").locator("g.node"),
 		).toHaveCount(4);

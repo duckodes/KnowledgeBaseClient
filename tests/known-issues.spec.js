@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("F01: Mermaid policy rejects semicolon-separated style statements", async ({
 	page,
 }) => {
-	await page.goto("/reader.html");
+	await page.goto("/reader.html?doc=guide.md");
 	const policy = await page.evaluate(async () => {
 		const { diagramAllowed } =
 			await import("/tests/assets/security-entry.js");
@@ -37,7 +37,7 @@ test("F03: TOC current does not remain on a later section at the page top", asyn
 	page,
 }) => {
 	await page.setViewportSize({ width: 1440, height: 900 });
-	await page.goto("/reader.html");
+	await page.goto("/reader.html?doc=guide.md");
 	await expect(
 		page.frameLocator(".ks-diagram-frame").locator("g.node"),
 	).toHaveCount(4);

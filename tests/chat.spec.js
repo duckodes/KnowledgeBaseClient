@@ -17,7 +17,7 @@ test("existing login, Q&A protocol/history/errors/logout and Reader entry", asyn
 		route.fulfill({
 			contentType: "text/javascript",
 			body: route.request().url().endsWith("firebase-app.js")
-				? "export const initializeApp=()=>({});"
+				? "export const getApps=()=>[]; export const getApp=()=>({}); export const initializeApp=()=>({});"
 				: authStub,
 		}),
 	);
@@ -90,8 +90,6 @@ test("existing login, Q&A protocol/history/errors/logout and Reader entry", asyn
 		.getByRole("link", { name: "文件閱讀（另開分頁）", exact: true })
 		.click();
 	const reader = await popup;
-	await expect(reader.locator("article h1")).toContainText(
-		"合成文件的閱讀指南",
-	);
+	await expect(reader.locator("#reader-status")).toContainText("請先登入");
 	await expect(page.locator("#question")).toBeDisabled();
 });

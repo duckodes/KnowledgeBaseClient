@@ -43,7 +43,7 @@ for (const width of [320, 390, 1440])
 				.evaluate((el) => getComputedStyle(el).overflowY),
 		).toBe("hidden");
 		expect(chat.overflow).toBe(false);
-		await page.goto("/reader.html");
+		await page.goto("/reader.html?doc=guide.md");
 		await page.locator("#reader-theme").selectOption("light");
 		await page.locator("#reader-theme").focus();
 		const reader = await measure({

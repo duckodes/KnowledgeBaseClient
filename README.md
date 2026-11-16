@@ -1,8 +1,20 @@
 # Jacfit Knowledge Base Client
 
-## M1.2 Document Reader（本地原型）
+## Document Reader
 
-保留現有 Firebase Login 與 AI Q&A，新增獨立 `reader.html`。Reader 只使用隨附的合成 Markdown，不需要登入或文件後端，不會連接私人知識來源。問答頁上方的「文件閱讀」入口另開分頁，保留原分頁的問答狀態。
+`reader.html` 沿用 Q&A 的 Firebase Authentication；問答頁的「文件閱讀」入口另開分頁，保留問答狀態。未登入時不呼叫私人文件 API，請由「返回 AI 問答」登入。登入只證明身分，公司 Membership／文件 ACL 必須由後端驗證。
+
+Reader 先 GET `https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFiles?includeContent=false`，以 `path`、`bytes`、`updated` 建立可收合的資料夾清單；選取文件後才 GET 同一 Endpoint 的 Full Content Mode，以完整路徑取出 `content`，交給既有 Markdown／DOMPurify／Mermaid 流程。沒有假設單檔 Endpoint，也不直接取得 GCS Object 或 Signed URL。
+
+兩頁共用 `firebase-auth.js` 初始化同一預設 Firebase App 設定與 SDK Persistence。文件請求使用 `user.getIdToken()`、Bearer Header、`cache: "no-store"`、30 秒期限與 AbortSignal。401 不自動重試，清空 Cache 並要求返回 Q&A 重新登入；403 清空 Cache 並顯示拒絕存取。其他失敗可按「重新整理文件清單」重試。
+
+正文只留在目前 Auth Session 的記憶體，Full Fetch 使用 Single-flight，5 分鐘後清除並重新核對清單與目前文件；手動重新整理、登出、換帳號或離開頁面也會清除。回到背景頁會核對期限，BFCache 恢復會重新初始化。失敗 Promise 不永久保留。已下載內容可能在期限內繼續可讀，前端無法即時收回或防止複製；快取不能替代 Server-side Authorization。
+
+API 驗證文件數量（最多 1000）、單檔宣告／UTF-8 大小（600 KB）、正文長度（沿用 Renderer 的 150,000 字元）與串流總大小（32 MiB）。不合法 Schema、重複路徑、Traversal、無效 Unicode 或缺少正文會拒絕。Cache-Control 若沒有 `no-store` 會拒絕顯示；標頭缺少時顯示待核對警告。Cache-Control 是 CORS Safelisted Response Header，不需額外 Expose-Headers。這些是相容目前約 98 份文件的 Client 保護界限，實際公司資料仍待合法 Session 核對。
+
+完整 `path` 保留大小寫與 Unicode 作為暫時 Document ID，相對連結只能指向可信 Metadata Map。`?source=knowledge&doc=...#...` 保留跨文件、Heading、Back／Forward 與 Refresh；重新命名或搬移會讓舊連結失效。合成範例保留於 `reader.html?doc=guide.md`、`?doc=safety.md` 與既有連結範例書籤；正式文件即使名為 `guide.md` 也以 `source=knowledge` 區別。README 不作特殊路由。
+
+**Live Authorization: Not Verified。** 本 Repository 不含該 Cloud Function Source；Identity 驗證、公司 Membership／Document ACL、每份文件授權、撤權、GCS 保護與正式 Cache／CORS 設定仍未驗證。Mock Regression Pass 不代表可安全正式上線。
 
 需要 Node.js 22+ 與 npm：
 
@@ -22,7 +34,7 @@ M1.1 加入共享 Green／Neutral Tokens、手機收合導覽、依閱讀線更�
 M1.2 沿用 Q&A 的原始 Jacfit SVG／JACFIT／KNOWLEDGE STUDIO，統一 UI 排字與字型合成設定；
 正文保留 16px／1.8 行高，Dark Mode 改為中性 Charcoal Surface，綠色用於品牌與互動提示。
 未新增遠端字型；實際字體依系統安裝的 Font Stack 回退，測試另檢查 Chrome 的 Platform Fonts。
-此版本只供固定合成資料驗收，不代表已接入私人文件或公司授權；Preview 不作正式發布伺服器。
+上述為原型視覺沿革；目前已接入 Authenticated Document API 架構，公司授權仍待獨立驗證。Preview 不作正式發布伺服器。
 
 ## 編輯規格
 

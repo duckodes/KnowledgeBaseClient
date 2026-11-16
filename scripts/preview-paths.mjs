@@ -5,6 +5,7 @@ import { fixturePaths } from "../reader/links.js";
 const publicFiles = new Set([
 	"index.html",
 	"app.js",
+	"firebase-auth.js",
 	"styles.css",
 	"styles/tokens.css",
 	"styles/brand.css",

@@ -4,10 +4,10 @@ export const fixturePaths = Object.freeze([
 	"examples/連結 範例.md",
 	"safety.md",
 ]);
-export function readerUrl(path, fragment = "") {
-	return `?doc=${encodeURIComponent(path)}${fragment ? "#" + encodeURIComponent(fragment) : ""}`;
+export function readerUrl(path, fragment = "", privateSource = false) {
+	return `?${privateSource ? "source=knowledge&" : ""}doc=${encodeURIComponent(path)}${fragment ? "#" + encodeURIComponent(fragment) : ""}`;
 }
-export function resolveLink(raw, source) {
+export function resolveLink(raw, source, paths = fixturePaths) {
 	if (typeof raw !== "string" || !raw || /[\u0000-\u0020\u007f\\]/u.test(raw))
 		return { kind: "blocked" };
 	if (/^https?:\/\//i.test(raw)) {
@@ -49,11 +49,11 @@ export function resolveLink(raw, source) {
 		} else segments.push(segment);
 	}
 	const target = path ? segments.join("/") : source;
-	if (!fixturePaths.includes(target)) return { kind: "unavailable" };
+	if (!(paths instanceof Map ? paths.has(target) : paths.includes(target))) return { kind: "unavailable" };
 	return {
 		kind: "local",
 		path: target,
 		fragment,
-		href: readerUrl(target, fragment),
+		href: readerUrl(target, fragment, paths instanceof Map),
 	};
 }

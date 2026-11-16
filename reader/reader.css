@@ -97,6 +97,14 @@
 	display: grid;
 	gap: 4px;
 }
+.ks-reader #reader-library details {
+	padding-left: 12px;
+	min-width: 0;
+}
+.ks-reader #reader-library summary,
+.ks-reader #reader-metadata {
+	overflow-wrap: anywhere;
+}
 .ks-reader #reader-library a {
 	display: block;
 	padding: 8px 12px;

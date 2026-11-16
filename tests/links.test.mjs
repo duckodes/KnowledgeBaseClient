@@ -48,3 +48,12 @@ test("reject traversal, schemes, encoded separators and unknown sources", () => 
 		"external",
 	);
 });
+test("private links use the exact authorized path map and retain encoded fragments", () => {
+	const paths = new Map([["01_架構/README.md", {}], ["02_流程/README.md", {}], ["guide.md", {}]]);
+	const link = resolveLink("../02_%E6%B5%81%E7%A8%8B/README.md#中文章節", "01_架構/README.md", paths);
+	assert.equal(link.path, "02_流程/README.md");
+	assert.equal(link.href, readerUrl("02_流程/README.md", "中文章節", true));
+	assert.equal(resolveLink("../02_流程/readme.md", "01_架構/README.md", paths).kind, "unavailable");
+	assert.equal(resolveLink("../../guide.md", "01_架構/README.md", paths).kind, "blocked");
+	assert.equal(resolveLink("../not-authorized.md", "01_架構/README.md", paths).kind, "unavailable");
+});

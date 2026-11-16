@@ -2,6 +2,7 @@ import { build } from "esbuild";
 await build({
 	entryPoints: ["reader/reader.js"],
 	bundle: true,
+	external: ["https://*"],
 	splitting: true,
 	format: "esm",
 	outdir: "reader/assets",

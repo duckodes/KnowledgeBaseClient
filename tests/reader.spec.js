@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test("parser and sanitizer resist XSS corpus and report malformed headings", async ({
 	page,
 }) => {
-	await page.goto("/reader.html");
+	await page.goto("/reader.html?doc=guide.md");
 	const result = await page.evaluate(async () => {
 		const { renderMarkdown, diagramAllowed, mermaidConfig } =
 			await import("/tests/assets/security-entry.js");
@@ -37,7 +37,7 @@ test("parser and sanitizer resist XSS corpus and report malformed headings", asy
 test("headings, H2 sections, unique anchors and browser history", async ({
 	page,
 }) => {
-	await page.goto("/reader.html");
+	await page.goto("/reader.html?doc=guide.md");
 	await expect(page.locator("article h1")).toHaveText("合成文件的閱讀指南§");
 	expect(await page.locator("article h1").count()).toBe(1);
 	expect(await page.locator("article > section").count()).toBe(5);
@@ -156,7 +156,7 @@ for (const width of [320, 390, 1440])
 			reducedMotion: "reduce",
 			colorScheme: "dark",
 		});
-		await page.goto("/reader.html");
+		await page.goto("/reader.html?doc=guide.md");
 		await expect(page.locator("article h1")).toBeVisible();
 		await page.keyboard.press("Tab");
 		await expect(page.locator(".ks-skip")).toBeFocused();
@@ -240,7 +240,7 @@ test("copy success and clipboard failure provide honest feedback", async ({
 	context,
 }) => {
 	await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-	await page.goto("/reader.html");
+	await page.goto("/reader.html?doc=guide.md");
 	const expected = await page
 		.locator(".ks-code pre code")
 		.first()
@@ -277,7 +277,7 @@ test("no JavaScript still provides full raw synthetic source", async ({
 }) => {
 	const context = await browser.newContext({ javaScriptEnabled: false });
 	const page = await context.newPage();
-	await page.goto(baseURL + "/reader.html");
+	await page.goto(baseURL + "/reader.html?doc=guide.md");
 	await page.getByRole("link", { name: "閱讀指南", exact: true }).click();
 	await expect(page.locator("body")).toContainText("## 流程圖");
 	await context.close();
@@ -289,7 +289,7 @@ test("diagram resource failure leaves original code and alternative description"
 	await page.route("**/reader/assets/chunks/*mermaid*", (route) =>
 		route.abort(),
 	);
-	await page.goto("/reader.html");
+	await page.goto("/reader.html?doc=guide.md");
 	await expect(page.locator(".ks-diagram-error")).toHaveCount(1);
 	await expect(page.locator(".ks-diagram details")).toHaveAttribute(
 		"open",

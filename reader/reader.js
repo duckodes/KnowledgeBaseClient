@@ -4,7 +4,14 @@ import safety from "./fixtures/safety.md";
 import { readerUrl, fixturePaths } from "./links.js";
 import { renderMarkdown } from "./markdown.js";
 import { renderDiagram } from "./diagrams.js";
-const documents = new Map([
+import { DocumentSource } from "./document-source.js";
+import { validDocumentPath } from "./document-api.js";
+const params = new URLSearchParams(location.search);
+// Legacy fixture bookmarks stay public; explicit knowledge routes cannot alias them.
+const privateSource = params.get("source") === "knowledge" || !(params.get("source") === "fixtures" || fixturePaths.includes(params.get("doc")) || (params.has("doc") && !validDocumentPath(params.get("doc"))));
+const documentSource = new DocumentSource();
+let authUser = null, authReady = false, metadataReady = false, session = 0, metadataGeneration = 0, expiryTimer;
+let documents = new Map([
 	[
 		fixturePaths[0],
 		{ title: "合成文件的閱讀指南", text: guide, label: "01 / 閱讀指南" },
@@ -62,13 +69,37 @@ function applyTheme() {
 }
 applyTheme();
 const isDark = () => document.documentElement.dataset.readerTheme === "dark";
-for (const [path, doc] of documents) {
-	const a = document.createElement("a");
-	a.href = readerUrl(path);
-	a.textContent = doc.label;
-	a.dataset.doc = path;
-	document.querySelector("#reader-library").append(a);
+const library = document.querySelector("#reader-library");
+const metadata = document.querySelector("#reader-metadata");
+const refresh = document.querySelector("#reader-refresh");
+function buildLibrary() {
+	library.replaceChildren();
+	const folders = new Map([["", library]]);
+	const entries = [...documents];
+	if (privateSource) entries.sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+	for (const [path, doc] of entries) {
+		let parent = library, folderPath = "";
+		const segments = privateSource ? path.split("/") : [path];
+		for (const segment of segments.slice(0, -1)) {
+			folderPath += `${segment}/`;
+			if (!folders.has(folderPath)) {
+				const details = document.createElement("details");
+				const summary = document.createElement("summary");
+				summary.textContent = segment;
+				details.append(summary);
+				parent.append(details);
+				folders.set(folderPath, details);
+			}
+			parent = folders.get(folderPath);
+		}
+		const a = document.createElement("a");
+		a.href = readerUrl(path, "", privateSource);
+		a.textContent = privateSource ? segments.at(-1) : doc.label;
+		a.dataset.doc = path;
+		parent.append(a);
+	}
 }
+if (!privateSource) buildLibrary();
 function announce(text) {
 	status.textContent = text;
 }
@@ -186,36 +217,113 @@ async function decorateDiagrams(token) {
 		moveToFragment(false);
 	scheduleCurrent();
 }
-function load({ focus = false, force = false } = {}) {
+function closeExpanded() {
 	const expanded = document.querySelector(".ks-diagram-dialog[open]");
 	if (expanded) {
 		expanded.dataset.navigating = "";
 		expanded.close();
 	}
+}
+function clearArticle() {
+	closeExpanded();
+	++generation;
+	currentPath = null;
+	pendingFragment = false;
+	article.replaceChildren();
+	toc.replaceChildren();
+	headings = [];
+	metadata.textContent = "";
+	document.querySelector("#reader-path").textContent = "";
+	const source = document.querySelector("#reader-source");
+	source.hidden = true;
+	source.removeAttribute("href");
+	document.title = "文件閱讀 · KnowledgeSpace";
+}
+const errors = {
+	"login-required": "請先登入，再返回閱讀公司文件。",
+	unauthorized: "登入已失效，請返回 AI 問答重新登入。",
+	forbidden: "目前帳號沒有文件閱讀權限。",
+	missing: "找不到這份文件，請由文件清單選擇。",
+	"not-found": "文件服務不存在（404）。",
+	timeout: "文件請求逾時，請重新整理文件清單。",
+	abort: "文件請求已取消，請重新整理文件清單。",
+	network: "網路連線失敗，請重新整理文件清單。",
+	server: "文件服務暫時無法回應（5xx）。",
+	schema: "文件回應格式無效，已停止顯示。",
+	limit: "文件回應超過安全大小限制，已停止顯示。",
+	cache: "伺服器未提供 no-store，已停止顯示私人文件。",
+};
+function showError(error) {
+	clearTimeout(expiryTimer);
+	clearArticle();
+	if (privateSource) {
+		documentSource.reset();
+		documents = new Map();
+		metadataReady = false;
+		buildLibrary();
+	}
+	status.dataset.state = error.code || "api-error";
+	announce(errors[error.code] || "文件載入失敗，請重新整理文件清單。");
+}
+function cacheWarning() {
+	return documentSource.cachePolicy === "unknown" ? " 伺服器未提供可核對的 Cache-Control，需後端確認。" : "";
+}
+async function refreshDocuments() {
+	if (!authUser) return;
+	const ownSession = session, request = ++metadataGeneration;
+	clearTimeout(expiryTimer);
+	clearArticle();
+	metadataReady = false;
+	documents = new Map();
+	buildLibrary();
+	status.dataset.state = "loading";
+	announce("正在載入文件清單…");
+	try {
+		const result = await documentSource.listDocuments();
+		if (ownSession !== session || request !== metadataGeneration) return;
+		documents = result;
+		metadataReady = true;
+		buildLibrary();
+		await load();
+	} catch (error) {
+		if (ownSession === session && request === metadataGeneration) showError(error);
+	}
+}
+async function load({ focus = false, force = false } = {}) {
+	if (privateSource && (!authReady || !authUser || !metadataReady)) return;
+	closeExpanded();
 	const path =
-		new URLSearchParams(location.search).get("doc") || fixturePaths[0];
-	if (path === currentPath && !force) {
+		new URLSearchParams(location.search).get("doc") || (privateSource ? "" : fixturePaths[0]);
+	if (path === currentPath && !force && article.childNodes.length) {
 		announce("");
 		moveToFragment(focus);
 		return;
 	}
+	clearArticle();
 	currentPath = path;
-	const token = ++generation;
+	const token = generation, ownSession = session;
 	pendingFragment = Boolean(location.hash);
-	article.replaceChildren();
-	toc.replaceChildren();
-	headings = [];
-	const doc = documents.get(path);
+	let doc = documents.get(path);
 	document.querySelector("#reader-path").textContent = doc
-		? `文件 / ${doc.title}`
+		? `文件 / ${privateSource ? path : doc.title}`
 		: "文件不存在";
 	const source = document.querySelector("#reader-source");
-	source.hidden = !doc;
+	source.hidden = privateSource || !doc;
 	for (const a of document.querySelectorAll("#reader-library a")) {
-		if (a.dataset.doc === path) a.setAttribute("aria-current", "page");
+		if (a.dataset.doc === path) {
+			a.setAttribute("aria-current", "page");
+			for (let parent = a.parentElement; parent !== library; parent = parent.parentElement) {
+				if (parent.tagName === "DETAILS") parent.open = true;
+			}
+		}
 		else a.removeAttribute("aria-current");
 	}
 	if (!doc) {
+		if (privateSource) {
+			status.dataset.state = path ? "missing" : documents.size ? "select" : "empty";
+			announce(path ? errors.missing : documents.size ? `共 ${documents.size} 份文件，請從導覽選擇。${cacheWarning()}` : "目前沒有可閱讀的文件。");
+			return;
+		}
 		const h = document.createElement("h1");
 		h.textContent = "找不到這份合成文件";
 		article.append(h);
@@ -224,15 +332,32 @@ function load({ focus = false, force = false } = {}) {
 		if (focus) article.focus();
 		return;
 	}
-	source.href = `./reader/fixtures/${path.split("/").map(encodeURIComponent).join("/")}`;
+	if (privateSource) {
+		status.dataset.state = "loading";
+		announce("正在載入文件正文…");
+		try {
+			doc = await documentSource.loadDocument(path);
+			if (token !== generation || ownSession !== session) return;
+		} catch (error) {
+			if (token === generation && ownSession === session) showError(error);
+			return;
+		}
+		clearTimeout(expiryTimer);
+		expiryTimer = setTimeout(() => refreshDocuments(), Math.max(0, documentSource.expires - Date.now()));
+		metadata.textContent = `${doc.path} · ${doc.bytes.toLocaleString()} bytes · 更新 ${doc.updated}${cacheWarning()}`;
+		document.querySelector("#reader-path").textContent = `文件 / ${doc.title}`;
+	} else source.href = `./reader/fixtures/${path.split("/").map(encodeURIComponent).join("/")}`;
 	document.title = `${doc.title} · KnowledgeSpace`;
-	const result = renderMarkdown(doc.text, path);
+	let result;
+	try { result = renderMarkdown(doc.text, path, privateSource ? documents : undefined); }
+	catch { showError({ code: "schema" }); return; }
 	headings = result.headings;
 	article.append(result.fragment);
 	announce(result.issues.join(" "));
+	status.dataset.state = "ready";
 	for (const h of headings.filter((h) => h.level === 2 || h.level === 3)) {
 		const a = document.createElement("a");
-		a.href = readerUrl(path, h.id);
+		a.href = readerUrl(path, h.id, privateSource);
 		a.textContent = h.title;
 		a.dataset.heading = h.id;
 		a.className = `ks-toc-level-${h.level}`;
@@ -275,7 +400,7 @@ function load({ focus = false, force = false } = {}) {
 		.then(() =>
 			token === generation ? decorateDiagrams(token) : undefined,
 		)
-		.catch(() => announce("圖表資源無法載入，請閱讀原碼。"));
+		.catch(() => { if (token === generation) announce("圖表資源無法載入，請閱讀原碼。"); });
 }
 document.addEventListener("click", (event) => {
 	if (
@@ -319,4 +444,54 @@ media.addEventListener("change", () => {
 		load({ force: true });
 	}
 });
-load();
+refresh.hidden = !privateSource;
+refresh.addEventListener("click", () => refreshDocuments());
+if (!privateSource) load();
+else {
+	documents = new Map();
+	clearArticle();
+	document.querySelector(".ks-raw-fallback").hidden = true;
+	document.querySelector(".ks-local-note").textContent = "公司文件需由伺服器授權；登入不代表具備文件權限。";
+	document.querySelector(".ks-sidebar .ks-eyebrow").textContent = "公司文件 · DOCUMENTS";
+	library.setAttribute("aria-label", "公司文件");
+	document.querySelector(".ks-footer span").textContent = "Private documents · Server authorization required";
+	announce("正在確認登入狀態…");
+	window.addEventListener("pagehide", () => {
+		++session;
+		clearTimeout(expiryTimer);
+		documentSource.setUser(null);
+		authUser = null;
+		clearArticle();
+		documents = new Map();
+		buildLibrary();
+	});
+	window.addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });
+	document.addEventListener("visibilitychange", () => {
+		if (!document.hidden && authUser && documentSource.expires && Date.now() >= documentSource.expires) void refreshDocuments();
+	});
+	try {
+		const { initializeFirebaseAuth, onAuthStateChanged } = await import("../firebase-auth.js");
+		const { auth } = await initializeFirebaseAuth();
+		onAuthStateChanged(auth, (user) => {
+			++session;
+			clearTimeout(expiryTimer);
+			documentSource.setUser(user);
+			authUser = user;
+			authReady = true;
+			metadataReady = false;
+			documents = new Map();
+			buildLibrary();
+			clearArticle();
+			refresh.disabled = !user;
+			if (user) void refreshDocuments();
+			else showError({ code: "login-required" });
+		}, () => {
+			++session;
+			clearTimeout(expiryTimer);
+			documentSource.setUser(null);
+			authUser = null;
+			refresh.disabled = true;
+			showError({ code: "unauthorized" });
+		});
+	} catch { showError({ code: "auth-error" }); }
+}

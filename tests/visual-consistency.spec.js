@@ -81,7 +81,7 @@ for (const width of [320, 390, 1440]) {
 			breadcrumb: ".breadcrumb",
 		});
 		const qaFonts = await platformFonts(page, ".brand-copy strong");
-		await page.goto("/reader.html");
+		await page.goto("/reader.html?doc=guide.md");
 		await page.locator("#reader-theme").selectOption("light");
 		await expect(
 			page.getByRole("link", { name: "Jacfit 文件閱讀首頁" }),
@@ -131,7 +131,7 @@ for (const width of [320, 390, 1440]) {
 			if (!request.url().startsWith("http://127.0.0.1:31338/"))
 				external.push(request.url());
 		});
-		await page.goto("/reader.html");
+		await page.goto("/reader.html?doc=guide.md");
 		await page.locator("#reader-theme").selectOption("dark");
 		const surfaces = await page.evaluate(() => {
 			const style = getComputedStyle(document.body);

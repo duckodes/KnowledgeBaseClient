@@ -20,7 +20,7 @@ const parser = new MarkdownIt({
 // No image renderer: documents cannot cause remote or local resource requests.
 parser.renderer.rules.image = (tokens, i) =>
 	`[圖片未載入：${parser.utils.escapeHtml(tokens[i].content)}]`;
-export function renderMarkdown(markdown, source) {
+export function renderMarkdown(markdown, source, paths) {
 	if (markdown.length > 150_000) throw new Error("文件超過 M1 大小限制。");
 	const fragment = DOMPurify.sanitize(parser.render(markdown), {
 		ALLOWED_TAGS: [
@@ -93,7 +93,7 @@ export function renderMarkdown(markdown, source) {
 	if (headings.filter((h) => h.level === 1).length !== 1)
 		issues.push("文件必須只有一個 H1。");
 	for (const link of fragment.querySelectorAll("a:not(.ks-heading-anchor)")) {
-		const resolved = resolveLink(link.getAttribute("href"), source);
+		const resolved = resolveLink(link.getAttribute("href"), source, paths);
 		if (resolved.kind === "local") link.setAttribute("href", resolved.href);
 		else if (resolved.kind === "external") {
 			link.href = resolved.href;

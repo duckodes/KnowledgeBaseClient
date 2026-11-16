@@ -1,10 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js";
+import { initializeFirebaseAuth, onAuthStateChanged } from "./firebase-auth.js";
 import {
-	browserLocalPersistence,
 	createUserWithEmailAndPassword,
-	getAuth,
-	onAuthStateChanged,
-	setPersistence,
 	signInWithEmailAndPassword,
 	signOut,
 } from "https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js";
@@ -469,17 +465,7 @@ mobileSignOutButton.addEventListener("click", handleSignOut);
 
 let firebaseConfig;
 try {
-	const configResponse = await fetch("./config/firebaseConfig.json");
-	if (!configResponse.ok) {
-		throw new Error("找不到 config/firebaseConfig.json。");
-	}
-	firebaseConfig = await configResponse.json();
-	if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
-		throw new Error("Firebase 設定缺少 apiKey 或 projectId。");
-	}
-	const firebaseApp = initializeApp(firebaseConfig);
-	auth = getAuth(firebaseApp);
-	await setPersistence(auth, browserLocalPersistence);
+	({ auth, config: firebaseConfig } = await initializeFirebaseAuth());
 	onAuthStateChanged(auth, updateSignedInUi, (error) => {
 		console.error("Firebase Auth state error:", error);
 		setAuthMessage("無法確認登入狀態，請重新整理頁面。");
