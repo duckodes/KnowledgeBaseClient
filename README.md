@@ -2,19 +2,25 @@
 
 ## Document Reader
 
-`reader.html` 沿用 Q&A 的 Firebase Authentication；問答頁的「文件閱讀」入口另開分頁，保留問答狀態。未登入時不呼叫私人文件 API，請由「返回 AI 問答」登入。登入只證明身分，公司 Membership／文件 ACL 必須由後端驗證。
+`reader.html` 沿用 Q&A 的 Firebase Authentication；問答頁的「文件閱讀」入口在同一個 Tab 導航，保留瀏覽器 History，可使用上一頁／下一頁返回。未登入時不呼叫私人文件 API，請由「返回 AI 問答」登入。登入只證明身分，公司 Membership／文件 ACL 必須由後端驗證。
 
-Reader 先 GET `https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFiles?includeContent=false`，以 `path`、`bytes`、`updated` 建立可收合的資料夾清單；選取文件後才 GET 同一 Endpoint 的 Full Content Mode，以完整路徑取出 `content`，交給既有 Markdown／DOMPurify／Mermaid 流程。沒有假設單檔 Endpoint，也不直接取得 GCS Object 或 Signed URL。
+Reader 先 GET `https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFiles?includeContent=false`，建立可收合的資料夾清單；未指定文件時，登入與清單驗證完成後預設載入根目錄 `README.md`，其他文件選取後才 GET `https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFile`。URLSearchParams 編碼 Metadata Map 的完整 `path`；成功回應採使用者確認的 `{ file: { path, bytes, updated, content } }`，檢查回傳路徑與選取項目完全相同，再交給既有 Markdown／DOMPurify／Mermaid Renderer。正文不再全量下載，也沒有 Bulk Fallback；不直接取得 GCS Object 或 Signed URL。
 
-兩頁共用 `firebase-auth.js` 初始化同一預設 Firebase App 設定與 SDK Persistence。文件請求使用 `user.getIdToken()`、Bearer Header、`cache: "no-store"`、30 秒期限與 AbortSignal。401 不自動重試，清空 Cache 並要求返回 Q&A 重新登入；403 清空 Cache 並顯示拒絕存取。其他失敗可按「重新整理文件清單」重試。
+Reader 不顯示或請求 `AGENTS.md`、`analysis-reprt`／`analysis-report`（含 `.md` 與同名資料夾下文件）、`00_AI檢索地圖與回答規則.md`；名稱比對不分英文字母大小寫，套用到所有資料夾。這些項目先從 Metadata Map 排除，直接網址與相對連結也無法載入；此呈現規則不取代後端權限檢查。根目錄 `README.md` 不存在時保留清單選擇，空清單則顯示 Empty；不改開子資料夾 README。預設文件以 `replaceState` 更新同一筆 History，已指定的文件與 Fragment 不被覆蓋。
 
-正文只留在目前 Auth Session 的記憶體，Full Fetch 使用 Single-flight，5 分鐘後清除並重新核對清單與目前文件；手動重新整理、登出、換帳號或離開頁面也會清除。回到背景頁會核對期限，BFCache 恢復會重新初始化。失敗 Promise 不永久保留。已下載內容可能在期限內繼續可讀，前端無法即時收回或防止複製；快取不能替代 Server-side Authorization。
+`analysis-report-ai/` 整個資料夾及所有下層文件也完全排除，不建立資料夾導覽或請求正文；即使位於其他資料夾內、使用不同英文大小寫，或透過 Reader 直接網址／相對連結存取，同樣不渲染。
 
-API 驗證文件數量（最多 1000）、單檔宣告／UTF-8 大小（600 KB）、正文長度（沿用 Renderer 的 150,000 字元）與串流總大小（32 MiB）。不合法 Schema、重複路徑、Traversal、無效 Unicode 或缺少正文會拒絕。Cache-Control 若沒有 `no-store` 會拒絕顯示；標頭缺少時顯示待核對警告。Cache-Control 是 CORS Safelisted Response Header，不需額外 Expose-Headers。這些是相容目前約 98 份文件的 Client 保護界限，實際公司資料仍待合法 Session 核對。
+兩頁共用 `firebase-auth.js` 與 SDK Persistence。請求使用 `user.getIdToken()`、Bearer Header、`cache: "no-store"` 與禁止 Redirect。總操作期限維持 30 秒，每次嘗試最多 10 秒，涵蓋 Token、Headers、Body；最多兩次自動重試。只有 Network／Timeout／429／502／503／504 會重試，採 250–500 ms、500–1000 ms 指數退避與 Jitter，且不早於有效 Retry-After。退避可取消並受總期限限制。其他 HTTP、Schema／大小錯誤、使用者取消與身分切換不自動重試。跨來源 Retry-After 需由後端 Expose-Headers 暴露。
 
-完整 `path` 保留大小寫與 Unicode 作為暫時 Document ID，相對連結只能指向可信 Metadata Map。`?source=knowledge&doc=...#...` 保留跨文件、Heading、Back／Forward 與 Refresh；重新命名或搬移會讓舊連結失效。合成範例保留於 `reader.html?doc=guide.md`、`?doc=safety.md` 與既有連結範例書籤；正式文件即使名為 `guide.md` 也以 `source=knowledge` 區別。README 不作特殊路由。
+一般單檔失敗保留 Sidebar，提供「重新載入文件」；載入中仍能導覽或取消，不需刷新整頁。401／403 清空私人清單與 Cache，顯示重新登入／無權限訊息。429 的手動重試按鈕會等待伺服器冷卻時間。Markdown 解析前讓出主執行緒，Mermaid 延後處理而不阻擋文字。上方顯示完整資料夾／文件路徑（省略 `.md`），「重新整理文件清單」在同一列右側；更新時間使用 Asia/Taipei，格式為 `YYYY-MM-DD HH:mm:ss`，來源只有分鐘時保留 `HH:mm`。不顯示載入診斷或 bytes。
 
-**Live Authorization: Not Verified。** 本 Repository 不含該 Cloud Function Source；Identity 驗證、公司 Membership／Document ACL、每份文件授權、撤權、GCS 保護與正式 Cache／CORS 設定仍未驗證。Mock Regression Pass 不代表可安全正式上線。
+正文只留在目前 Auth Session 的逐檔記憶體 Cache，TTL 五分鐘，命中不延長期限；上限 20 Entries／4 MiB 估計 UTF-16 記憶體（正文、路徑與固定 Entry 預算）。相同文件 Single-flight，一位等待者離開只取消自己的訂閱，最後一位離開才取消共用請求。Metadata Refresh 先隱藏舊內容，成功後只恢復 `updated`／`bytes` 相符且未過期的 Entry。失敗 Promise 不保留。登出、換帳號、401／403、Pagehide／BFCache 清理與背景回前景的期限核對保留。前端無法即時收回已取得或複製的內容，Cache 不能替代 Server-side Authorization。
+
+API 驗證最多 1000 份文件、單檔宣告／UTF-8 大小 600,000 bytes、既有 Renderer 的 150,000 字元上限；Metadata 串流上限 32 MiB，單檔 JSON 串流上限 1 MiB（含 JSON Escaping 空間）。不合法 Schema、重複路徑、Traversal、無效 Unicode／UTF-8 或缺少正文會拒絕。Cache-Control 明確不含 `no-store` 時拒絕顯示；標頭缺少時顯示待核對警告。Cache-Control 是 CORS Safelisted Header，與 Retry-After 不同。實際公司資料大小與成功回應標頭仍待合法 Session 核對。
+
+完整 `path` 保留大小寫與 Unicode 作為暫時 Document ID，相對連結只能指向可信 Metadata Map。`?source=knowledge&doc=...#...` 保留跨文件、Heading、Back／Forward 與 Refresh；重新命名或搬移會讓舊連結失效。合成範例保留於 `reader.html?doc=guide.md`、`?doc=safety.md` 與既有連結範例書籤；正式文件即使名為 `guide.md` 也以 `source=knowledge` 區別。只有根目錄 `README.md` 作為未指定文件時的預設內容，子資料夾 README 仍以完整路徑導航。
+
+**Live Performance & Authorization: Pending。** 單檔 Response Shape 由使用者提供的實際欄位確認，本輪沒有合法 Session 獨立下載成功回應。本 Repository 不含該 Cloud Function Source；公司 Membership／Document ACL、撤權、GCS 保護與成功回應的 Cache／CORS／效能仍未驗證。匿名 GET 401 與預檢 204 不代表完整授權驗收；Mock Performance 不代表正式環境改善證明。
 
 需要 Node.js 22+ 與 npm：
 
@@ -73,6 +79,9 @@ Preview 使用明確的公開檔案 Allowlist、解析後的實體路徑核對�
 Preview 僅供本機開發，不能作為 Production Server。
 
 TOC 以最後一個跨越閱讀線的 H2／H3 為 current；首個 H2 之前無 current。捲動只更新呈現，不修改 URL、History 或焦點。
+文件開頭的平面 Frontmatter 會顯示為「文件資訊（文件自述）」欄位表格，包含中文欄名、文字值與路徑／對象清單；狀態不推論為已驗證。
+支援 `---` 包住的文字欄位、帶引號的文字陣列與 `-` 清單，以及以 `title:` 開頭的相同欄位區塊。
+複雜 YAML、重複欄位或格式錯誤保留原本的安全 Markdown 呈現，不執行其中的 HTML／連結，也不新增 YAML 套件。
 手機「瀏覽文件與章節」預設收合；Escape 關閉並回到開關，選章節則回到正文標題。
 圖表預設 100% 適合寬度；放大後在圖內捲動或用方向鍵平移。「展開圖表」使用同一個 iframe，Escape／關閉後回到原按鈕。
 

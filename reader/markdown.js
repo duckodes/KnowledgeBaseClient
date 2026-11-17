@@ -4,6 +4,7 @@ import hljs from "highlight.js/lib/core";
 import javascript from "highlight.js/lib/languages/javascript";
 import json from "highlight.js/lib/languages/json";
 import { resolveLink } from "./links.js";
+import { splitFrontmatter } from "./frontmatter.js";
 hljs.registerLanguage("javascript", javascript);
 hljs.registerLanguage("json", json);
 const parser = new MarkdownIt({
@@ -22,7 +23,8 @@ parser.renderer.rules.image = (tokens, i) =>
 	`[圖片未載入：${parser.utils.escapeHtml(tokens[i].content)}]`;
 export function renderMarkdown(markdown, source, paths) {
 	if (markdown.length > 150_000) throw new Error("文件超過 M1 大小限制。");
-	const fragment = DOMPurify.sanitize(parser.render(markdown), {
+	const { body, fields } = splitFrontmatter(markdown);
+	const fragment = DOMPurify.sanitize(parser.render(body), {
 		ALLOWED_TAGS: [
 			"h1",
 			"h2",
@@ -119,6 +121,36 @@ export function renderMarkdown(markdown, source, paths) {
 			fragment.insertBefore(section, node);
 			section.append(node);
 		} else if (section) section.append(node);
+	}
+	if (fields.length) {
+		const labels = {
+			title: "標題", owner: "負責人", status: "狀態", last_verified: "最後驗證日期",
+			source_commit: "來源 Commit", source_worktree: "來源工作目錄",
+			related_code: "相關程式路徑", audience: "適用對象", branch: "分支", verification_scope: "驗證範圍",
+		};
+		const table = document.createElement("table"), caption = document.createElement("caption"), tbody = document.createElement("tbody");
+		table.className = "ks-document-fields";
+		caption.textContent = "文件資訊（文件自述）";
+		table.append(caption, tbody);
+		for (const [key, value] of fields) {
+			const row = document.createElement("tr"), label = document.createElement("th"), cell = document.createElement("td");
+			label.scope = "row";
+			label.textContent = Object.hasOwn(labels, key) ? labels[key] : key;
+			if (Array.isArray(value) && value.length) {
+				const list = document.createElement("ul");
+				for (const text of value) {
+					const item = document.createElement("li");
+					item.textContent = text;
+					list.append(item);
+				}
+				cell.append(list);
+			} else cell.textContent = value.length ? value : "—";
+			row.append(label, cell);
+			tbody.append(row);
+		}
+		const title = fragment.querySelector("h1");
+		if (title) title.after(table);
+		else fragment.prepend(table);
 	}
 	for (const table of fragment.querySelectorAll("table")) {
 		const wrapper = document.createElement("div");

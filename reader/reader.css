@@ -164,6 +164,7 @@
 }
 .ks-reader .ks-document-bar {
 	display: flex;
+	align-items: center;
 	justify-content: space-between;
 	flex-wrap: wrap;
 	gap: 8px;
@@ -172,6 +173,15 @@
 		var(--ks-breadcrumb-font-size)/var(--ks-ui-line-height) var(--ks-font);
 	padding-bottom: 20px;
 	border-bottom: 1px solid var(--ks-line);
+}
+.ks-reader #reader-path {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+.ks-reader #reader-refresh {
+	flex-shrink: 0;
+	margin-left: auto;
 }
 .ks-reader #reader-article {
 	overflow-wrap: anywhere;
@@ -182,6 +192,7 @@
 .ks-reader #reader-article h4 {
 	line-height: 1.4;
 	letter-spacing: -0.025em;
+	padding-inline-end: 1em;
 	scroll-margin-top: var(--ks-heading-offset);
 }
 .ks-reader #reader-article h1 {
@@ -314,6 +325,29 @@
 }
 .ks-reader tr:last-child td {
 	border-bottom: 0;
+}
+.ks-reader .ks-document-fields {
+	min-width: 0;
+	table-layout: fixed;
+	overflow-wrap: anywhere;
+}
+.ks-reader .ks-document-fields caption {
+	padding: 12px 16px;
+	text-align: left;
+	color: var(--ks-muted);
+	background: var(--ks-surface);
+}
+.ks-reader .ks-document-fields th {
+	width: 30%;
+}
+.ks-reader .ks-document-fields th,
+.ks-reader .ks-document-fields td {
+	min-width: 0;
+	padding: 10px;
+}
+.ks-reader .ks-document-fields ul {
+	margin: 0;
+	padding-inline-start: 1.2em;
 }
 .ks-reader .ks-diagram {
 	margin: 24px 0;

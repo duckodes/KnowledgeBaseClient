@@ -6,7 +6,7 @@
 		<meta name="color-scheme" content="light dark" />
 		<meta
 			http-equiv="Content-Security-Policy"
-			content="default-src 'none'; script-src 'self' https://www.gstatic.com/firebasejs/11.10.0/; style-src 'self' 'unsafe-inline'; img-src 'none'; connect-src 'self' https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFiles https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; font-src 'none'; frame-src 'self' about: https://source-c3817.firebaseapp.com/__/auth/; object-src 'none'; base-uri 'none'; form-action 'none'"
+			content="default-src 'none'; script-src 'self' https://www.gstatic.com/firebasejs/11.10.0/; style-src 'self' 'unsafe-inline'; img-src 'none'; connect-src 'self' https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFiles https://us-central1-source-c3817.cloudfunctions.net/getKnowledgeBaseFile https://identitytoolkit.googleapis.com https://securetoken.googleapis.com; font-src 'none'; frame-src 'self' about: https://source-c3817.firebaseapp.com/__/auth/; object-src 'none'; base-uri 'none'; form-action 'none'"
 		/>
 		<meta name="referrer" content="no-referrer" />
 		<title>文件閱讀室 · KnowledgeSpace</title>
@@ -77,9 +77,12 @@
 				<div class="ks-document-bar">
 					<span id="reader-path"></span>
 					<a id="reader-source">閱讀原始 Markdown ↗</a>
+					<button id="reader-refresh" type="button" hidden>重新整理文件清單</button>
 				</div>
 				<p id="reader-status" role="status" class="ks-status"></p>
-				<button id="reader-refresh" type="button" hidden>重新整理文件清單</button>
+				<button id="reader-retry" type="button" hidden>重新載入文件</button>
+				<button id="reader-cancel" type="button" hidden>取消載入</button>
+				<p id="reader-diagram-status" role="status" class="ks-status"></p>
 				<p id="reader-metadata" class="ks-status"></p>
 				<article
 					id="reader-article"

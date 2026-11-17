@@ -1,5 +1,34 @@
 import { test, expect } from "@playwright/test";
 
+test("document metadata is literal text and unsupported YAML keeps the safe fallback", async ({ page, baseURL }) => {
+	const remote = [];
+	page.on("request", (request) => { if (!request.url().startsWith(baseURL + "/")) remote.push(request.url()); });
+	await page.goto("/reader.html?doc=guide.md");
+	const result = await page.evaluate(async () => {
+		const { renderMarkdown } = await import("/tests/assets/security-entry.js");
+		const input = '---\ntitle: "Synthetic"\nowner: "<img src=x onerror=alert(1)>"\nrelated_code: ["[link](javascript:alert(1))", "https://example.invalid/pixel"]\n---\n# Safe\n\n## Section';
+		const { fragment, headings, issues } = renderMarkdown(input, "guide.md");
+		const container = document.createElement("div");
+		container.append(fragment);
+		const fallback = renderMarkdown('---\ntitle: "Synthetic"\nowner:\n  name: "<script>alert(1)</script>"\n---\n# Safe', "guide.md");
+		return {
+			unsafe: container.querySelectorAll("img,script,iframe,[onerror],td a").length,
+			text: container.textContent,
+			headings: headings.map((h) => h.id), issues,
+			fallbackTable: fallback.fragment.querySelectorAll(".ks-document-fields").length,
+			fallbackText: fallback.fragment.textContent,
+		};
+	});
+	expect(result.unsafe).toBe(0);
+	expect(result.text).toContain("<img src=x onerror=alert(1)>");
+	expect(result.text).toContain("[link](javascript:alert(1))");
+	expect(result.headings).toEqual(["safe", "section"]);
+	expect(result.issues).toEqual([]);
+	expect(result.fallbackTable).toBe(0);
+	expect(result.fallbackText).toContain("<script>alert(1)</script>");
+	expect(remote).toEqual([]);
+});
+
 test("parser and sanitizer resist XSS corpus and report malformed headings", async ({
 	page,
 }) => {

@@ -85,11 +85,18 @@ test("existing login, Q&A protocol/history/errors/logout and Reader entry", asyn
 	await page.locator("#sign-out").click();
 	await expect(page.locator("#question")).toBeDisabled();
 	await expect(page.locator("#messages")).toBeEmpty();
-	const popup = page.waitForEvent("popup");
+	const pages = page.context().pages().length;
 	await page
-		.getByRole("link", { name: "文件閱讀（另開分頁）", exact: true })
+		.getByRole("link", { name: "文件閱讀", exact: true })
 		.click();
-	const reader = await popup;
-	await expect(reader.locator("#reader-status")).toContainText("請先登入");
+	await expect(page).toHaveURL(/\/reader\.html$/);
+	await expect(page.locator("#reader-status")).toContainText("請先登入");
+	expect(page.context().pages().length).toBe(pages);
+	await page.goBack();
+	await expect(page).toHaveURL(/\/$/);
 	await expect(page.locator("#question")).toBeDisabled();
+	await page.goForward();
+	await expect(page).toHaveURL(/\/reader\.html$/);
+	await expect(page.locator("#reader-status")).toContainText("請先登入");
+	expect(page.context().pages().length).toBe(pages);
 });

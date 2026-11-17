@@ -6,11 +6,12 @@ import { renderMarkdown } from "./markdown.js";
 import { renderDiagram } from "./diagrams.js";
 import { DocumentSource } from "./document-source.js";
 import { validDocumentPath } from "./document-api.js";
+import { formatUpdated } from "./metadata.js";
 const params = new URLSearchParams(location.search);
 // Legacy fixture bookmarks stay public; explicit knowledge routes cannot alias them.
 const privateSource = params.get("source") === "knowledge" || !(params.get("source") === "fixtures" || fixturePaths.includes(params.get("doc")) || (params.has("doc") && !validDocumentPath(params.get("doc"))));
 const documentSource = new DocumentSource();
-let authUser = null, authReady = false, metadataReady = false, session = 0, metadataGeneration = 0, expiryTimer;
+let authUser = null, authReady = false, metadataReady = false, session = 0, metadataGeneration = 0, expiryTimer, retryTimer, routeController, displayedExpiry = 0;
 let documents = new Map([
 	[
 		fixturePaths[0],
@@ -72,6 +73,15 @@ const isDark = () => document.documentElement.dataset.readerTheme === "dark";
 const library = document.querySelector("#reader-library");
 const metadata = document.querySelector("#reader-metadata");
 const refresh = document.querySelector("#reader-refresh");
+const retry = document.querySelector("#reader-retry");
+const cancel = document.querySelector("#reader-cancel");
+const diagramStatus = document.querySelector("#reader-diagram-status");
+function setState(state, message) {
+	status.dataset.state = state;
+	article.setAttribute("aria-busy", String(["loading", "retrying", "rendering"].includes(state)));
+	cancel.hidden = !privateSource || !["loading", "retrying"].includes(state) || !currentPath;
+	announce(message);
+}
 function buildLibrary() {
 	library.replaceChildren();
 	const folders = new Map([["", library]]);
@@ -180,6 +190,7 @@ function moveToFragment(focus = false) {
 	updateCurrent();
 }
 async function decorateDiagrams(token) {
+	if (privateSource && article.querySelector("code.language-mermaid")) diagramStatus.textContent = "正在載入 Mermaid，文字已可閱讀。";
 	for (const code of article.querySelectorAll(
 		"pre > code.language-mermaid",
 	)) {
@@ -215,6 +226,9 @@ async function decorateDiagrams(token) {
 	// Async diagram height must not move the requested fragment away from the viewport.
 	if (token === generation && pendingFragment && location.hash)
 		moveToFragment(false);
+	if (token === generation && privateSource) {
+		diagramStatus.textContent = "";
+	}
 	scheduleCurrent();
 }
 function closeExpanded() {
@@ -226,6 +240,13 @@ function closeExpanded() {
 }
 function clearArticle() {
 	closeExpanded();
+	routeController?.abort("route-change");
+	clearTimeout(expiryTimer);
+	clearTimeout(retryTimer);
+	displayedExpiry = 0;
+	retry.hidden = true;
+	cancel.hidden = true;
+	diagramStatus.textContent = "";
 	++generation;
 	currentPath = null;
 	pendingFragment = false;
@@ -244,26 +265,35 @@ const errors = {
 	unauthorized: "登入已失效，請返回 AI 問答重新登入。",
 	forbidden: "目前帳號沒有文件閱讀權限。",
 	missing: "找不到這份文件，請由文件清單選擇。",
-	"not-found": "文件服務不存在（404）。",
-	timeout: "文件請求逾時，請重新整理文件清單。",
-	abort: "文件請求已取消，請重新整理文件清單。",
-	network: "網路連線失敗，請重新整理文件清單。",
+	"not-found": "找不到文件或文件服務（404）。",
+	timeout: "文件請求逾時，可重新載入文件。",
+	abort: "文件請求已取消，可重新載入文件。",
+	network: "網路連線失敗，可重新載入文件。",
 	server: "文件服務暫時無法回應（5xx）。",
+	"rate-limited": "文件服務暫時限制請求，請稍後重新載入文件。",
 	schema: "文件回應格式無效，已停止顯示。",
 	limit: "文件回應超過安全大小限制，已停止顯示。",
 	cache: "伺服器未提供 no-store，已停止顯示私人文件。",
 };
-function showError(error) {
-	clearTimeout(expiryTimer);
+function showError(error, documentPath) {
 	clearArticle();
-	if (privateSource) {
+	if (privateSource && (!documentPath || ["unauthorized", "forbidden"].includes(error.code))) {
 		documentSource.reset();
 		documents = new Map();
 		metadataReady = false;
 		buildLibrary();
 	}
-	status.dataset.state = error.code || "api-error";
-	announce(errors[error.code] || "文件載入失敗，請重新整理文件清單。");
+	if (documentPath && metadataReady) {
+		document.querySelector("#reader-path").textContent = `文件 / ${documentPath.replace(/\.md$/i, "")}`;
+		retry.hidden = false;
+		const enable = () => {
+			const delay = (error.retryAt || 0) - Date.now();
+			retry.disabled = delay > 0;
+			if (delay > 0) retryTimer = setTimeout(enable, Math.min(delay, 60_000));
+		};
+		enable();
+	}
+	setState(error.code || "api-error", errors[error.code] || (documentPath ? "文件載入失敗，可重新載入文件。" : "文件載入失敗，請重新整理文件清單。"));
 }
 function cacheWarning() {
 	return documentSource.cachePolicy === "unknown" ? " 伺服器未提供可核對的 Cache-Control，需後端確認。" : "";
@@ -276,10 +306,11 @@ async function refreshDocuments() {
 	metadataReady = false;
 	documents = new Map();
 	buildLibrary();
-	status.dataset.state = "loading";
-	announce("正在載入文件清單…");
+	setState("loading", "正在載入文件清單…");
 	try {
-		const result = await documentSource.listDocuments();
+		const result = await documentSource.listDocuments({ onState: (state) => {
+			if (ownSession === session && request === metadataGeneration) setState("retrying", `正在重試文件清單（${state.attempt}/2）…`);
+		} });
 		if (ownSession !== session || request !== metadataGeneration) return;
 		documents = result;
 		metadataReady = true;
@@ -289,11 +320,17 @@ async function refreshDocuments() {
 		if (ownSession === session && request === metadataGeneration) showError(error);
 	}
 }
-async function load({ focus = false, force = false } = {}) {
+async function load({ focus = false, force = false, reload = false } = {}) {
 	if (privateSource && (!authReady || !authUser || !metadataReady)) return;
 	closeExpanded();
-	const path =
-		new URLSearchParams(location.search).get("doc") || (privateSource ? "" : fixturePaths[0]);
+	const url = new URL(location.href);
+	if (privateSource && !url.searchParams.has("doc") && documents.has("README.md")) {
+		url.searchParams.set("source", "knowledge");
+		url.searchParams.set("doc", "README.md");
+		history.replaceState(null, "", url);
+	}
+	const path = url.searchParams.get("doc") || (privateSource ? "" : fixturePaths[0]);
+	if (path === currentPath && !force && privateSource && ["loading", "retrying", "rendering"].includes(status.dataset.state)) return;
 	if (path === currentPath && !force && article.childNodes.length) {
 		announce("");
 		moveToFragment(focus);
@@ -301,11 +338,12 @@ async function load({ focus = false, force = false } = {}) {
 	}
 	clearArticle();
 	currentPath = path;
+	routeController = new AbortController();
 	const token = generation, ownSession = session;
 	pendingFragment = Boolean(location.hash);
 	let doc = documents.get(path);
 	document.querySelector("#reader-path").textContent = doc
-		? `文件 / ${privateSource ? path : doc.title}`
+		? `文件 / ${privateSource ? path.replace(/\.md$/i, "") : doc.title}`
 		: "文件不存在";
 	const source = document.querySelector("#reader-source");
 	source.hidden = privateSource || !doc;
@@ -320,8 +358,7 @@ async function load({ focus = false, force = false } = {}) {
 	}
 	if (!doc) {
 		if (privateSource) {
-			status.dataset.state = path ? "missing" : documents.size ? "select" : "empty";
-			announce(path ? errors.missing : documents.size ? `共 ${documents.size} 份文件，請從導覽選擇。${cacheWarning()}` : "目前沒有可閱讀的文件。");
+			setState(path ? "missing" : documents.size ? "select" : "empty", path ? errors.missing : documents.size ? `共 ${documents.size} 份文件，請從導覽選擇。${cacheWarning()}` : "目前沒有可閱讀的文件。");
 			return;
 		}
 		const h = document.createElement("h1");
@@ -333,28 +370,39 @@ async function load({ focus = false, force = false } = {}) {
 		return;
 	}
 	if (privateSource) {
-		status.dataset.state = "loading";
-		announce("正在載入文件正文…");
+		setState("loading", "正在載入文件正文…");
 		try {
-			doc = await documentSource.loadDocument(path);
+			doc = await documentSource.loadDocument(path, {
+				signal: routeController.signal, reload,
+				onState: (state) => { if (token === generation && ownSession === session) setState("retrying", `正在重試文件（${state.attempt}/2）…`); },
+			});
 			if (token !== generation || ownSession !== session) return;
 		} catch (error) {
-			if (token === generation && ownSession === session) showError(error);
+			if (token === generation && ownSession === session) showError(error, path);
 			return;
 		}
 		clearTimeout(expiryTimer);
-		expiryTimer = setTimeout(() => refreshDocuments(), Math.max(0, documentSource.expires - Date.now()));
-		metadata.textContent = `${doc.path} · ${doc.bytes.toLocaleString()} bytes · 更新 ${doc.updated}${cacheWarning()}`;
-		document.querySelector("#reader-path").textContent = `文件 / ${doc.title}`;
+		displayedExpiry = doc.expires;
+		expiryTimer = setTimeout(() => refreshDocuments(), Math.max(0, displayedExpiry - Date.now()));
+		const updated = document.createElement("time");
+		updated.dateTime = doc.updated;
+		updated.textContent = formatUpdated(doc.updated);
+		metadata.replaceChildren("更新 ", updated, cacheWarning());
+		document.querySelector("#reader-path").textContent = `文件 / ${doc.path.replace(/\.md$/i, "")}`;
 	} else source.href = `./reader/fixtures/${path.split("/").map(encodeURIComponent).join("/")}`;
 	document.title = `${doc.title} · KnowledgeSpace`;
+	if (privateSource) {
+		setState("rendering", "正在解析 Markdown…");
+		if (globalThis.scheduler?.yield) await scheduler.yield();
+		else await new Promise((resolve) => setTimeout(resolve, 0));
+		if (token !== generation || ownSession !== session) return;
+	}
 	let result;
 	try { result = renderMarkdown(doc.text, path, privateSource ? documents : undefined); }
 	catch { showError({ code: "schema" }); return; }
 	headings = result.headings;
 	article.append(result.fragment);
-	announce(result.issues.join(" "));
-	status.dataset.state = "ready";
+	setState("ready", result.issues.join(" "));
 	for (const h of headings.filter((h) => h.level === 2 || h.level === 3)) {
 		const a = document.createElement("a");
 		a.href = readerUrl(path, h.id, privateSource);
@@ -446,6 +494,8 @@ media.addEventListener("change", () => {
 });
 refresh.hidden = !privateSource;
 refresh.addEventListener("click", () => refreshDocuments());
+retry.addEventListener("click", () => load({ force: true, reload: true, focus: true }));
+cancel.addEventListener("click", () => routeController?.abort("user-abort"));
 if (!privateSource) load();
 else {
 	documents = new Map();
@@ -455,7 +505,7 @@ else {
 	document.querySelector(".ks-sidebar .ks-eyebrow").textContent = "公司文件 · DOCUMENTS";
 	library.setAttribute("aria-label", "公司文件");
 	document.querySelector(".ks-footer span").textContent = "Private documents · Server authorization required";
-	announce("正在確認登入狀態…");
+	setState("auth-checking", "正在確認登入狀態…");
 	window.addEventListener("pagehide", () => {
 		++session;
 		clearTimeout(expiryTimer);
@@ -467,7 +517,7 @@ else {
 	});
 	window.addEventListener("pageshow", (event) => { if (event.persisted) location.reload(); });
 	document.addEventListener("visibilitychange", () => {
-		if (!document.hidden && authUser && documentSource.expires && Date.now() >= documentSource.expires) void refreshDocuments();
+		if (!document.hidden && authUser && displayedExpiry && Date.now() >= displayedExpiry) void refreshDocuments();
 	});
 	try {
 		const { initializeFirebaseAuth, onAuthStateChanged } = await import("../firebase-auth.js");
